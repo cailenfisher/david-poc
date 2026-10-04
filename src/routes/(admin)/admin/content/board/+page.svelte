@@ -139,7 +139,6 @@
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    padding: var(--space-6, 1.5rem);
   }
 
   .board__title {

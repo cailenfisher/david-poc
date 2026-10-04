@@ -140,7 +140,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
-    padding: var(--space-6);
     max-width: 72rem;
     margin-inline: auto;
   }

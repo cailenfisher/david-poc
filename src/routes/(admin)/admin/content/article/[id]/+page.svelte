@@ -456,7 +456,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-6, 1.5rem);
-    padding: var(--space-6, 1.5rem);
     max-width: 78rem;
     margin-inline: auto;
   }

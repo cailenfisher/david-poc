@@ -50,9 +50,6 @@
 
 <div class="admin-layout">
   <nav class="admin-layout__sidebar" aria-label={dictionary.localText('admin.nav.label')}>
-    <div class="admin-layout__logo">
-      <a href="/admin/dashboard">{dictionary.localText('admin.title')}</a>
-    </div>
     <ul class="admin-layout__nav">
       {#each newsroomLinks as link (link.href)}
         <li>
@@ -93,6 +90,7 @@
 
   <div class="admin-layout__body">
     <header class="admin-layout__header">
+      <a href="/admin/dashboard" class="admin-layout__title">{dictionary.localText('admin.title')}</a>
       <div class="admin-layout__user">
         <Avatar
           fallback={data.user?.email?.charAt(0)?.toUpperCase() ?? '?'}
@@ -128,16 +126,15 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 1.25rem 0.75rem;
-    border-right: 1px solid var(--border-color);
+    border-inline-end: 1px solid var(--border-color);
     background-color: var(--surface-raised);
   }
 
-  .admin-layout__logo a {
+  .admin-layout__title {
     font-weight: 600;
     font-size: 1rem;
     text-decoration: none;
     color: inherit;
-    padding: 0 0.5rem;
   }
 
   .admin-layout__nav {
@@ -227,7 +224,7 @@
 
   .admin-layout__header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     padding: 0.625rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
@@ -246,7 +243,23 @@
   }
 
   .admin-layout__main {
-    padding: 1.5rem;
+    padding: 1rem;
     flex: 1;
+  }
+
+  @media (width >= 48rem) {
+    .admin-layout__main {
+      padding: 1.5rem;
+    }
+  }
+
+  @media (width < 48rem) {
+    .admin-layout__header {
+      padding-inline: 1rem;
+    }
+
+    .admin-layout__email {
+      display: none;
+    }
   }
 </style>
