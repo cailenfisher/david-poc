@@ -70,7 +70,11 @@
     color: var(--text-soft, inherit);
   }
 
+  /* --link-text rather than the browser default, whose blue and visited purple are
+     unreadable on the dark theme's card surface. */
   .dashboard-widget__link {
     font-size: var(--text-sm, 0.875rem);
+    color: var(--link-text);
+    text-underline-offset: 0.2em;
   }
 </style>
