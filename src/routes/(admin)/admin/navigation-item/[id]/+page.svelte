@@ -135,6 +135,7 @@
     background-color: var(--surface-overlay);
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
   }
 
   .nav-item-edit-page__section {
@@ -172,6 +173,12 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: var(--space-4);
+  }
+
+  @media (width < 40rem) {
+    .nav-item-edit-page__form-row {
+      grid-template-columns: 1fr;
+    }
   }
 
   .nav-item-edit-page__translations {

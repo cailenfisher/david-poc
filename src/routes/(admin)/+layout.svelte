@@ -2,6 +2,8 @@
   import '@fortawesome/fontawesome-free/css/fontawesome.min.css'
   import '@fortawesome/fontawesome-free/css/solid.min.css'
   import type { Snippet } from 'svelte'
+  import { MediaQuery } from 'svelte/reactivity'
+  import { afterNavigate } from '$app/navigation'
   import { page } from '$app/state'
   import { Avatar, Button } from '@sveltebuilder/coreui'
   import { getDictionary } from 'diglossia/svelte'
@@ -34,6 +36,36 @@
   // where they are. Writable derived: the toggle overrides it until the next
   // navigation recomputes it.
   let settingsExpanded = $derived(settingsLinks.some((link) => link.current))
+
+  // The fallback is used during SSR only; CSS media queries decide what is drawn, so
+  // the server-rendered HTML already matches the viewport.
+  const wideScreen = new MediaQuery('min-width: 64rem', true)
+
+  // null follows the screen size; a boolean is the operator's explicit choice.
+  let navigationChoice = $state<boolean | null>(null)
+  const navigationExpanded = $derived(navigationChoice ?? wideScreen.current)
+  const navigationOverlay = $derived(navigationExpanded && !wideScreen.current)
+
+  let navigationElement = $state<HTMLElement>()
+  let toggleButton = $state<HTMLButtonElement>()
+
+  function closeOverlay() {
+    if (navigationOverlay) navigationChoice = null
+  }
+
+  afterNavigate(closeOverlay)
+
+  function handleNavigationKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || !navigationOverlay) return
+    navigationChoice = null
+    toggleButton?.focus()
+  }
+
+  function handleNavigationFocusout(event: FocusEvent) {
+    const next = event.relatedTarget
+    if (next instanceof Node && navigationElement?.contains(next)) return
+    closeOverlay()
+  }
 </script>
 
 {#snippet navLink(link: { href: string; label: string; icon: string; current: boolean })}
@@ -48,12 +80,33 @@
   </a>
 {/snippet}
 
-<div class="admin-layout">
-  <nav class="admin-layout__sidebar" aria-label={dictionary.localText('admin.nav.label')}>
-    <div class="admin-layout__logo">
-      <a href="/admin/dashboard">{dictionary.localText('admin.title')}</a>
-    </div>
-    <ul class="admin-layout__nav">
+<div
+  class="admin-layout"
+  data-navigation={navigationChoice === null ? 'auto' : navigationChoice ? 'expanded' : 'collapsed'}
+>
+  <!-- Escape and focus-out are the keyboard paths for closing the overlay, so the
+       key and focus handlers on the landmark are intentional. -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <nav
+    bind:this={navigationElement}
+    class="admin-layout__sidebar"
+    class:admin-layout__sidebar--overlay={navigationOverlay}
+    aria-label={dictionary.localText('admin.nav.label')}
+    onkeydown={handleNavigationKeydown}
+    onfocusout={handleNavigationFocusout}
+  >
+    <button
+      bind:this={toggleButton}
+      type="button"
+      class="admin-layout__nav-link admin-layout__toggle"
+      aria-expanded={navigationExpanded}
+      aria-controls="admin-navigation-list"
+      aria-label={dictionary.localText('admin.nav.toggle')}
+      onclick={() => (navigationChoice = !navigationExpanded)}
+    >
+      <i class="fa-solid fa-bars admin-layout__icon" aria-hidden="true"></i>
+    </button>
+    <ul id="admin-navigation-list" class="admin-layout__nav">
       {#each newsroomLinks as link (link.href)}
         <li>
           {@render navLink(link)}
@@ -91,8 +144,16 @@
     </ul>
   </nav>
 
+  {#if navigationOverlay}
+    <!-- Pointer-only affordance: keyboard users close the overlay with Escape or by
+         moving focus out of the navigation. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="admin-layout__scrim" aria-hidden="true" onclick={closeOverlay}></div>
+  {/if}
+
   <div class="admin-layout__body">
     <header class="admin-layout__header">
+      <a href="/admin/dashboard" class="admin-layout__title">{dictionary.localText('admin.title')}</a>
       <div class="admin-layout__user">
         <Avatar
           fallback={data.user?.email?.charAt(0)?.toUpperCase() ?? '?'}
@@ -116,28 +177,70 @@
 
 <style>
   .admin-layout {
-    display: flex;
+    --navigation-rail-width: 3.75rem;
+    --navigation-full-width: 14rem;
+    /* What the nav draws, and what the layout reserves for it. */
+    --navigation-width: var(--navigation-rail-width);
+    --navigation-track: var(--navigation-rail-width);
+    --navigation-nested-indent: 0rem;
+    display: grid;
+    grid-template-columns: var(--navigation-track) minmax(0, 1fr);
     flex: 1;
     min-height: 100dvh;
   }
 
+  .admin-layout[data-navigation='expanded'] {
+    --navigation-width: var(--navigation-full-width);
+    --navigation-nested-indent: 1rem;
+  }
+
+  @media (width >= 64rem) {
+    .admin-layout[data-navigation='auto'] {
+      --navigation-width: var(--navigation-full-width);
+      --navigation-nested-indent: 1rem;
+    }
+
+    /* Wide screens reserve whatever the nav draws; narrow ones always reserve the
+       rail, so an expanded nav overlays the content instead of squeezing it. */
+    .admin-layout {
+      --navigation-track: var(--navigation-width);
+    }
+  }
+
   .admin-layout__sidebar {
-    width: 224px;
-    flex-shrink: 0;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 20;
+    align-self: start;
+    inline-size: var(--navigation-width);
+    block-size: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    padding: 1.25rem 0.75rem;
-    border-right: 1px solid var(--border-color);
+    padding: 0.75rem 0.5rem;
+    border-inline-end: 1px solid var(--border-color);
     background-color: var(--surface-raised);
   }
 
-  .admin-layout__logo a {
+  .admin-layout__sidebar--overlay {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .admin-layout__scrim {
+    position: fixed;
+    inset-block: 0;
+    inset-inline: var(--navigation-rail-width) 0;
+    z-index: 10;
+    background-color: rgb(0 0 0 / 0.3);
+  }
+
+  .admin-layout__title {
     font-weight: 600;
     font-size: 1rem;
     text-decoration: none;
     color: inherit;
-    padding: 0 0.5rem;
   }
 
   .admin-layout__nav {
@@ -151,7 +254,7 @@
 
   .admin-layout__nav--nested {
     margin-top: 0.125rem;
-    padding-inline-start: 1rem;
+    padding-inline-start: var(--navigation-nested-indent);
   }
 
   .admin-layout__nav--nested[hidden] {
@@ -163,7 +266,9 @@
     align-items: center;
     gap: 0.625rem;
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.625rem;
+    overflow: hidden;
+    white-space: nowrap;
     border: 0;
     border-radius: var(--radius);
     background: none;
@@ -182,7 +287,7 @@
 
   .admin-layout__nav-link:focus-visible {
     outline: 2px solid var(--brand);
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 
   /* Weight as well as background, so the current page is not marked by colour alone. */
@@ -192,7 +297,7 @@
   }
 
   .admin-layout__icon {
-    width: 1.25em;
+    width: 1.5rem;
     flex-shrink: 0;
     text-align: center;
     color: var(--text-soft);
@@ -211,6 +316,12 @@
     transform: rotate(180deg);
   }
 
+  @media (pointer: coarse) {
+    .admin-layout__nav-link {
+      min-block-size: 2.75rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .admin-layout__nav-link,
     .admin-layout__chevron {
@@ -227,7 +338,7 @@
 
   .admin-layout__header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     padding: 0.625rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
@@ -246,7 +357,23 @@
   }
 
   .admin-layout__main {
-    padding: 1.5rem;
+    padding: 1rem;
     flex: 1;
+  }
+
+  @media (width >= 48rem) {
+    .admin-layout__main {
+      padding: 1.5rem;
+    }
+  }
+
+  @media (width < 48rem) {
+    .admin-layout__header {
+      padding-inline: 1rem;
+    }
+
+    .admin-layout__email {
+      display: none;
+    }
   }
 </style>

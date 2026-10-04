@@ -98,3 +98,19 @@
 .select-trigger.error:focus-visible {
   box-shadow: 0 0 0 1px var(--danger);
 }
+
+/* ── Touch screens: keep focused fields at 16px ──────────────────────────────
+   iOS zooms the page whenever a focused field is under 16px. Unlayered, because
+   coreui's components layer sets the sizes being overridden. */
+@media (pointer: coarse) {
+  .input,
+  .input.sm,
+  .textarea,
+  .textarea.sm,
+  .select-trigger,
+  .select-trigger.sm,
+  select,
+  select.sm {
+    font-size: 1rem;
+  }
+}
