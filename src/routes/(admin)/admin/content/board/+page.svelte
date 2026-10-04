@@ -149,9 +149,10 @@
   .board__columns {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(15rem, 1fr);
+    grid-auto-columns: minmax(min(15rem, 85%), 1fr);
     gap: 1rem;
     overflow-x: auto;
+    scroll-snap-type: x proximity;
     padding-bottom: 0.5rem;
   }
 
@@ -160,6 +161,7 @@
     flex-direction: column;
     gap: 0.75rem;
     min-width: 0;
+    scroll-snap-align: start;
   }
 
   .board__column-title {
@@ -226,6 +228,7 @@
 
   .board__card-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.25rem;
     margin-top: 0.25rem;
   }

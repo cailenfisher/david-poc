@@ -156,6 +156,11 @@
     color: var(--text-soft, inherit);
   }
 
+  .moderation__email,
+  .moderation__body {
+    overflow-wrap: anywhere;
+  }
+
   .moderation__body {
     margin: 0;
     line-height: 1.5;
@@ -169,6 +174,7 @@
 
   .moderation__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 

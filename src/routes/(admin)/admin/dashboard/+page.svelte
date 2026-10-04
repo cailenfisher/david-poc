@@ -154,7 +154,7 @@
 
   .dashboard__stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
     gap: 1rem;
   }
 
@@ -197,6 +197,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .dashboard__section-title {

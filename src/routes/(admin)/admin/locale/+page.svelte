@@ -130,6 +130,12 @@
     background-color: var(--surface-raised);
   }
 
+  @media (width < 48rem) {
+    .locale-admin__add {
+      padding: var(--space-4);
+    }
+  }
+
   .locale-admin__error {
     color: var(--danger-text);
     font-size: var(--text-sm);
