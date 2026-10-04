@@ -16,6 +16,7 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.3.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@sveltebuilder/content": "latest",

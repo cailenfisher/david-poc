@@ -71,18 +71,18 @@
   .locale-edit-page__title {
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
+    color: var(--text);
     margin: 0;
   }
 
   .locale-edit-page__error {
-    color: var(--color-danger-text);
+    color: var(--danger-text);
     font-size: var(--text-sm);
     margin: 0;
   }
 
   .locale-edit-page__success {
-    color: var(--color-success-text);
+    color: var(--success-text);
     font-size: var(--text-sm);
     margin: 0;
   }
@@ -95,6 +95,6 @@
 
   .locale-edit-page__danger {
     padding-block-start: var(--space-6);
-    border-block-start: 1px solid var(--color-border-default);
+    border-block-start: 1px solid var(--border-color);
   }
 </style>

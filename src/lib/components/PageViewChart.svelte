@@ -113,7 +113,7 @@
   .page-view-chart__gridline {
     position: absolute;
     inset-inline: 0;
-    border-top: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+    border-top: 1px solid var(--border-color);
   }
 
   .page-view-chart__gridline--top {
@@ -158,15 +158,15 @@
   .page-view-chart__bar {
     width: 100%;
     max-width: 2.5rem;
-    background-color: var(--brand, #45b1e8);
-    border-radius: 4px 4px 0 0;
+    background-color: var(--brand);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     transition: opacity 0.12s;
   }
 
   /* A zero day still shows a hairline, so an empty day reads as "none" not "missing". */
   .page-view-chart__bar--zero {
     height: 2px !important;
-    background-color: var(--border-strong, rgba(0, 0, 0, 0.2));
+    background-color: var(--border-strong);
   }
 
   .page-view-chart__columns:hover .page-view-chart__bar {
@@ -187,11 +187,11 @@
     flex-direction: column;
     align-items: center;
     padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-sm);
     white-space: nowrap;
     font-size: var(--text-xs, 0.75rem);
-    color: var(--text-invert, #fff);
-    background-color: var(--surface-invert, #111);
+    color: var(--text-invert);
+    background-color: var(--surface-invert);
     pointer-events: none;
   }
 
@@ -232,7 +232,7 @@
   .page-view-chart__table td {
     padding: 0.25rem 1rem 0.25rem 0;
     text-align: start;
-    border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+    border-bottom: 1px solid var(--border-color);
   }
 
   .page-view-chart__table th[scope='row'] {

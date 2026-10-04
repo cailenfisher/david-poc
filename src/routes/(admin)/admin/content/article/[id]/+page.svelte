@@ -510,7 +510,7 @@
 
   .admin-article__section {
     border: 1px solid var(--border-subtle, currentColor);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-lg);
     padding: 1.25rem;
   }
 
@@ -587,7 +587,7 @@
     gap: 0.75rem;
     padding: 0.75rem;
     border: 1px solid var(--border-subtle, currentColor);
-    border-radius: 0.375rem;
+    border-radius: var(--radius);
   }
 
   .admin-article__block-head {

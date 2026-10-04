@@ -86,7 +86,7 @@
 
   .author-page__header {
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--color-border-default, currentColor);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .author-page__name {
@@ -101,7 +101,7 @@
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .author-page__expertise-label {
@@ -136,6 +136,6 @@
 
   .author-page__empty {
     margin: 0;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 </style>

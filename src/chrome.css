@@ -26,7 +26,7 @@
   flex-direction: column;
   background: var(--surface-raised);
   border: var(--border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
 }
 
@@ -70,7 +70,7 @@
   white-space: nowrap;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   border: var(--border);
 }
 
@@ -81,7 +81,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   border: 1px solid transparent;
 }
 
@@ -90,7 +90,7 @@
 .textarea:focus-visible {
   outline: none;
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 20%, transparent);
+  box-shadow: 0 0 0 1px var(--brand);
 }
 
 /* ---- Field error ---- */
@@ -102,7 +102,7 @@
 .input.error:focus-visible,
 .textarea.error:focus-visible {
   border-color: var(--danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+  box-shadow: 0 0 0 1px var(--danger);
 }
 
 /* ---- Field disabled ---- */

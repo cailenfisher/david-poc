@@ -90,7 +90,7 @@
 
   .topic-page__header {
     padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--color-border-default, currentColor);
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 2rem;
   }
 
@@ -100,7 +100,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .topic-page__title {
@@ -118,13 +118,13 @@
 
   .topic-page__empty {
     margin: 0;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .topic-page__siblings {
     margin-top: 3rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--color-border-default, currentColor);
+    border-top: 1px solid var(--border-color);
   }
 
   .topic-page__heading {

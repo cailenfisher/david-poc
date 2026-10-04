@@ -96,7 +96,7 @@
     margin: 0;
     font-size: var(--text-3xl);
     font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
+    color: var(--text);
   }
 
   .section-page__children {
@@ -113,6 +113,6 @@
 
   .section-page__empty {
     margin: 0;
-    color: var(--color-text-secondary);
+    color: var(--text-soft);
   }
 </style>
