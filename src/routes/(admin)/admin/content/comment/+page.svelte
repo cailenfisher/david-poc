@@ -136,7 +136,7 @@
     gap: 0.5rem;
     padding: 1rem;
     border: 1px solid var(--border-subtle, currentColor);
-    border-radius: 0.375rem;
+    border-radius: var(--radius);
   }
 
   .moderation__item--pending {

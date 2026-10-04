@@ -146,7 +146,7 @@
   .article-page__live {
     margin-block: 2.5rem;
     padding-top: 1.5rem;
-    border-top: 3px double var(--color-border-default, currentColor);
+    border-top: 3px double var(--border-color);
   }
 
   .article-page__live-heading {
@@ -163,7 +163,7 @@
   .article-page__live-state {
     font-weight: 400;
     letter-spacing: 0.04em;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .article-page__comments {
@@ -178,14 +178,14 @@
     margin: 0;
     font-size: var(--text-xl);
     font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
+    color: var(--text);
   }
 
   .article-page__comment-form-heading {
     margin: 0;
     font-size: var(--text-base);
     font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
+    color: var(--text);
   }
 
   .article-page__comment-list {
@@ -201,12 +201,12 @@
     margin: 0;
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
+    color: var(--text);
   }
 
   .article-page__comment-body {
     margin: var(--space-1) 0 0;
-    color: var(--color-text-secondary);
+    color: var(--text-soft);
   }
 
   .article-page__comment-form {

@@ -157,7 +157,7 @@
   .front__masthead {
     text-align: center;
     padding-block: 1rem 1.25rem;
-    border-bottom: 3px double var(--color-border-default, currentColor);
+    border-bottom: 3px double var(--border-color);
   }
 
   .front__nameplate {
@@ -174,7 +174,7 @@
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .front__sections {
@@ -183,7 +183,7 @@
     justify-content: center;
     gap: 0.25rem 1.5rem;
     padding-block: 0.75rem;
-    border-bottom: 1px solid var(--color-border-default, currentColor);
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 2rem;
   }
 
@@ -192,14 +192,14 @@
     grid-template-columns: 2fr 1fr;
     gap: 2rem;
     padding-bottom: 2rem;
-    border-bottom: 1px solid var(--color-border-default, currentColor);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .front__secondaries {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    border-left: 1px solid var(--color-border-default, currentColor);
+    border-left: 1px solid var(--border-color);
     padding-left: 2rem;
   }
 
@@ -220,7 +220,7 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    border-left: 1px solid var(--color-border-default, currentColor);
+    border-left: 1px solid var(--border-color);
     padding-left: 2rem;
   }
 
@@ -236,7 +236,7 @@
 
   .front__latest {
     padding-top: 2rem;
-    border-top: 1px solid var(--color-border-default, currentColor);
+    border-top: 1px solid var(--border-color);
   }
 
   .front__latest-grid {
@@ -255,7 +255,7 @@
     .front__briefs {
       border-left: none;
       padding-left: 0;
-      border-top: 1px solid var(--color-border-default, currentColor);
+      border-top: 1px solid var(--border-color);
       padding-top: 1.5rem;
     }
   }

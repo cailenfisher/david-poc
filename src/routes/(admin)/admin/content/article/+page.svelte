@@ -156,7 +156,7 @@
   .admin-article-list__title {
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
+    color: var(--text);
     margin: 0;
   }
 
@@ -167,14 +167,14 @@
   }
 
   .admin-article-list__link {
-    color: var(--color-text-primary);
+    color: var(--text);
     font-weight: var(--weight-medium);
   }
 
   .admin-article-list__slug {
     font-family: var(--font-mono);
     font-size: var(--text-sm);
-    color: var(--color-text-secondary);
+    color: var(--text-soft);
   }
 
   .admin-article-list__form {

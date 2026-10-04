@@ -112,7 +112,7 @@
   .nav-item-edit-page__title {
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
+    color: var(--text);
     margin: 0;
   }
 
@@ -125,14 +125,14 @@
   }
 
   .nav-item-edit-page__meta dt {
-    color: var(--color-text-secondary);
+    color: var(--text-soft);
     font-weight: var(--weight-medium);
   }
 
   .nav-item-edit-page__meta code {
     font-family: var(--font-mono);
     font-size: var(--text-xs);
-    background-color: var(--color-surface-overlay);
+    background-color: var(--surface-overlay);
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);
   }
@@ -146,18 +146,18 @@
   .nav-item-edit-page__section-title {
     font-size: var(--text-lg);
     font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
+    color: var(--text);
     margin: 0;
   }
 
   .nav-item-edit-page__error {
-    color: var(--color-danger-text);
+    color: var(--danger-text);
     font-size: var(--text-sm);
     margin: 0;
   }
 
   .nav-item-edit-page__success {
-    color: var(--color-success-text);
+    color: var(--success-text);
     font-size: var(--text-sm);
     margin: 0;
   }
@@ -185,12 +185,12 @@
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-4);
-    border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
   }
 
   .nav-item-edit-page__danger {
     padding-block-start: var(--space-6);
-    border-block-start: 1px solid var(--color-border-default);
+    border-block-start: 1px solid var(--border-color);
   }
 </style>

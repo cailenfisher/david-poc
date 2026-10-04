@@ -128,8 +128,8 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 1.25rem 0.75rem;
-    border-right: 1px solid var(--color-border-default, currentColor);
-    background-color: var(--color-surface-raised, transparent);
+    border-right: 1px solid var(--border-color);
+    background-color: var(--surface-raised);
   }
 
   .admin-layout__logo a {
@@ -165,37 +165,37 @@
     width: 100%;
     padding: 0.5rem 0.75rem;
     border: 0;
-    border-radius: 0.375rem;
+    border-radius: var(--radius);
     background: none;
     font: inherit;
     font-size: 0.875rem;
     text-align: start;
     text-decoration: none;
-    color: var(--color-text-primary, inherit);
+    color: var(--text);
     cursor: pointer;
     transition: background-color 0.12s;
   }
 
   .admin-layout__nav-link:hover {
-    background-color: var(--color-surface-overlay, rgba(0, 0, 0, 0.05));
+    background-color: var(--surface-overlay);
   }
 
   .admin-layout__nav-link:focus-visible {
-    outline: 2px solid var(--color-focus-ring, currentColor);
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
 
   /* Weight as well as background, so the current page is not marked by colour alone. */
   .admin-layout__nav-link--current {
     font-weight: 600;
-    background-color: var(--color-surface-overlay, rgba(0, 0, 0, 0.05));
+    background-color: var(--surface-overlay);
   }
 
   .admin-layout__icon {
     width: 1.25em;
     flex-shrink: 0;
     text-align: center;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .admin-layout__label {
@@ -230,7 +230,7 @@
     justify-content: flex-end;
     align-items: center;
     padding: 0.625rem 1.25rem;
-    border-bottom: 1px solid var(--color-border-default, currentColor);
+    border-bottom: 1px solid var(--border-color);
     min-height: 3.25rem;
   }
 
@@ -242,7 +242,7 @@
 
   .admin-layout__email {
     font-size: 0.875rem;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .admin-layout__main {

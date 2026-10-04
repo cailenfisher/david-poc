@@ -15,13 +15,86 @@
 @import './chrome.css' layer(chrome);
 @import '@sveltebuilder/coreui/styles/components.css' layer(components);
 
-/* ---- Token overrides ---- */
+/* ---- Token overrides ----
+   Deep navy brand on a cool neutral chrome. Status hues are deepened and
+   desaturated so they read as signals, not decoration. */
 :root {
-  --brand:  #45b1e8;   /* Picton Blue */
-  --chrome: #e2e8f0;
+  --brand:  #1b3a6b;   /* Deep navy */
+  --chrome: #d0d5dd;   /* Cool neutral gray */
 
-  --danger:  #ef4444;
-  --warning: #f59e0b;
-  --success: #22c55e;
-  --info:    #8b5cf6;
+  --danger:  #b42318;  /* Crimson */
+  --warning: #b54708;  /* Burnt amber */
+  --success: #067647;  /* Deep green */
+  --info:    #3e5c8a;  /* Slate blue, a quieter sibling of the brand */
+
+  --radius: 3px;
+
+  /* Crisper contrast — refinements of internal tokens.
+     These must be repeated in the dark blocks below, because this unlayered
+     :root comes after coreui's dark-mode rules and would otherwise win there. */
+  --border-strong: color-mix(in srgb, var(--chrome), black 35%);
+  --text-muted:    color-mix(in srgb, var(--chrome), black 45%);
+  --warning-fg:    white;
+
+  --shadow-xs: 0 1px 1px rgb(16 24 40 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.08), 0 0 0 1px rgb(16 24 40 / 0.02);
+  --shadow:    0 2px 4px -1px rgb(16 24 40 / 0.08), 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-lg: 0 8px 16px -4px rgb(16 24 40 / 0.10), 0 2px 4px -2px rgb(16 24 40 / 0.06);
+  --shadow-xl: 0 16px 32px -8px rgb(16 24 40 / 0.16), 0 4px 8px -4px rgb(16 24 40 / 0.06);
+}
+
+/* Navy and deep status hues are unreadable on dark surfaces; lift them. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand:   #8aa6d6;
+    --danger:  #f97066;
+    --warning: #fdb022;
+    --success: #47cd89;
+    --info:    #9fb3d1;
+
+    --border-strong: #475569;
+    --text-muted:    #8193a9;
+    --warning-fg:    #0f172a;
+
+    --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.3);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow:    0 2px 4px -1px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 8px 16px -4px rgb(0 0 0 / 0.5);
+    --shadow-xl: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+  }
+}
+
+[data-color-scheme='dark'] {
+  --brand:   #8aa6d6;
+  --danger:  #f97066;
+  --warning: #fdb022;
+  --success: #47cd89;
+  --info:    #9fb3d1;
+
+  --border-strong: #475569;
+  --text-muted:    #8193a9;
+  --warning-fg:    #0f172a;
+
+  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow:    0 2px 4px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 8px 16px -4px rgb(0 0 0 / 0.5);
+  --shadow-xl: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+}
+
+/* ---- Crisp focus rings ----
+   coreui's component layer uses a soft 3px glow on these controls; replace it
+   with a hard 1px ring that doubles the brand-colored border. */
+.barcode-input .field:focus,
+.locale-switcher .select:focus-visible,
+.select-trigger:focus-visible,
+.datetime-picker:focus,
+.block-textarea:focus,
+.embed-input:focus {
+  box-shadow: 0 0 0 1px var(--brand);
+}
+
+.barcode-input.error .field:focus,
+.select-trigger.error:focus-visible {
+  box-shadow: 0 0 0 1px var(--danger);
 }

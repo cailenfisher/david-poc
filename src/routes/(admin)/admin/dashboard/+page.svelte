@@ -168,7 +168,7 @@
     margin: 0;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -178,7 +178,7 @@
     font-size: 2rem;
     font-weight: 700;
     line-height: 1;
-    color: var(--color-text-primary, inherit);
+    color: var(--text);
   }
 
   .dashboard__widgets {
@@ -208,7 +208,7 @@
   .dashboard__empty {
     margin: 0;
     font-size: var(--text-sm, 0.875rem);
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
     text-align: center;
     padding: 1rem 0;
   }

@@ -197,7 +197,7 @@
     gap: 0.375rem;
     padding: 0.75rem;
     border: 1px solid var(--border-subtle, currentColor);
-    border-radius: 0.375rem;
+    border-radius: var(--radius);
   }
 
   .board__card-headline {

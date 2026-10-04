@@ -63,9 +63,9 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 2rem;
-    border: 1px solid var(--color-border-default, currentColor);
-    border-radius: 0.75rem;
-    background-color: var(--color-surface-default, transparent);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    background-color: var(--surface);
   }
 
   .sign-in-card__header {
@@ -84,7 +84,7 @@
   .sign-in-card__subtitle {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .sign-in-card__divider {
@@ -92,7 +92,7 @@
     align-items: center;
     gap: 0.75rem;
     font-size: 0.75rem;
-    color: var(--color-text-secondary, inherit);
+    color: var(--text-soft);
   }
 
   .sign-in-card__divider::before,
@@ -100,7 +100,7 @@
     content: '';
     flex: 1;
     height: 1px;
-    background-color: var(--color-border-default, currentColor);
+    background-color: var(--border-color);
   }
 
   .sign-in-card__local {
@@ -112,6 +112,6 @@
   .sign-in-card__error {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--color-text-danger, red);
+    color: var(--danger-text);
   }
 </style>
