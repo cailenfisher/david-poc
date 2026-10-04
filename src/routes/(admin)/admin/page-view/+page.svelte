@@ -149,6 +149,7 @@
 
   .page-view__windows {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.25rem;
     padding: 0.25rem;
     border: 1px solid var(--border-color);

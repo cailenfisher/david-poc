@@ -103,6 +103,7 @@
     background-color: var(--surface-overlay);
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
   }
 
   .local-text-edit-page__error {

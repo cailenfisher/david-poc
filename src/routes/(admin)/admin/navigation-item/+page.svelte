@@ -139,6 +139,12 @@
     background-color: var(--surface-raised);
   }
 
+  @media (width < 48rem) {
+    .nav-item-admin__add {
+      padding: var(--space-4);
+    }
+  }
+
   .nav-item-admin__error {
     color: var(--danger-text);
     font-size: var(--text-sm);
@@ -161,6 +167,12 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: var(--space-4);
+  }
+
+  @media (width < 40rem) {
+    .nav-item-admin__form-row {
+      grid-template-columns: 1fr;
+    }
   }
 
   .nav-item-admin__table-wrap {

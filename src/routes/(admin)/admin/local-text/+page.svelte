@@ -147,6 +147,12 @@
     background-color: var(--surface-raised);
   }
 
+  @media (width < 48rem) {
+    .local-text-admin__add {
+      padding: var(--space-4);
+    }
+  }
+
   .local-text-admin__error {
     color: var(--danger-text);
     font-size: var(--text-sm);
@@ -167,7 +173,7 @@
 
   .local-text-admin__locales {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
     gap: var(--space-4);
   }
 
