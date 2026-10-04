@@ -13,7 +13,8 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "screenshot": "node scripts/admin-screenshot.ts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.1",
@@ -32,6 +33,7 @@
     "@types/node": "^22.20.4",
     "drizzle-kit": "^0.29.0",
     "drizzle-orm": "^0.38.0",
+    "playwright": "^1.63.0",
     "supabase": "^2.0.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
