@@ -333,7 +333,8 @@ on conflict (href, scope) do nothing;
 -- newsroom wording is applied here as an override instead of edited there.
 -- "Translations" rather than "Content": in a newspaper, content means stories.
 insert into public.local_text_link (slug, scope, entity_id)
-values ('admin.nav.application_settings', null, null)
+values ('admin.nav.application_settings', null, null),
+  ('admin.nav.toggle', null, null)
 on conflict do nothing;
 
 insert into public.local_text (link, locale, content)
@@ -348,7 +349,9 @@ from (values
   ('admin.nav.navigation_item',      'en', 'Menus'),
   ('admin.nav.navigation_item',      'fr', 'Menus'),
   ('admin.nav.application_settings', 'en', 'Application settings'),
-  ('admin.nav.application_settings', 'fr', 'Paramètres de l''application')
+  ('admin.nav.application_settings', 'fr', 'Paramètres de l''application'),
+  ('admin.nav.toggle',               'en', 'Navigation menu'),
+  ('admin.nav.toggle',               'fr', 'Menu de navigation')
 ) as v(slug, code, content)
 join public.local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
 on conflict (link, locale) do update set content = excluded.content;

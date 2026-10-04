@@ -64,14 +64,16 @@ function parseArguments(argv: string[]) {
   const routes: string[] = []
   const viewports: string[] = []
   let label = 'current'
+  let openNavigation = false
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index]
     if (argument === '--label') label = argv[++index] ?? fail('--label needs a value')
     else if (argument === '--route') routes.push(argv[++index] ?? fail('--route needs a value'))
     else if (argument === '--viewport') viewports.push(argv[++index] ?? fail('--viewport needs a value'))
+    else if (argument === '--open-navigation') openNavigation = true
     else fail(`Unknown argument: ${argument}`)
   }
-  return { label, routes, viewports }
+  return { label, routes, viewports, openNavigation }
 }
 
 function parseEnvironmentText(text: string): Record<string, string> {
@@ -235,6 +237,15 @@ try {
       mkdirSync(dirname(file), { recursive: true })
       await captureWithRetry(page, file)
       shots.push({ route, viewport: viewport.name, overflow, offenders, file })
+
+      if (options.openNavigation) {
+        // The overlay is meant to sit over content, so these shots skip the overflow check.
+        await page.click('button[aria-controls="admin-navigation-list"]')
+        await page.waitForTimeout(300)
+        const openFile = file.replace(/\.png$/, '--navigation-open.png')
+        await captureWithRetry(page, openFile)
+        shots.push({ route, viewport: viewport.name, overflow: 0, offenders: [], file: openFile })
+      }
     }
     await context.close()
   }
