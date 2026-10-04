@@ -1103,8 +1103,8 @@ from (values
   ('content.comment.on_article', 'en', 'On'),
   ('content.comment.on_article', 'fr', 'Sur'),
 
-  ('content.user.title', 'en', 'People'),
-  ('content.user.title', 'fr', 'Personnes'),
+  ('content.user.title', 'en', 'Users'),
+  ('content.user.title', 'fr', 'Utilisateurs'),
   ('content.user.email', 'en', 'Email'),
   ('content.user.email', 'fr', 'Courriel'),
   ('content.user.admin', 'en', 'Administrator'),
@@ -1142,10 +1142,10 @@ on conflict do nothing;
 insert into local_text (link, locale, content)
 select l.id, (select id from locale where code = v.code), v.content
 from (values
-  ('admin.nav.board', 'en', 'Board'),        ('admin.nav.board', 'fr', 'Tableau'),
-  ('admin.nav.article', 'en', 'Articles'),   ('admin.nav.article', 'fr', 'Articles'),
-  ('admin.nav.comment', 'en', 'Comments'),   ('admin.nav.comment', 'fr', 'Commentaires'),
-  ('admin.nav.people', 'en', 'People'),      ('admin.nav.people', 'fr', 'Personnes')
+  ('admin.nav.board', 'en', 'Story pipeline'),     ('admin.nav.board', 'fr', 'Suivi des sujets'),
+  ('admin.nav.article', 'en', 'Stories'),           ('admin.nav.article', 'fr', 'Articles'),
+  ('admin.nav.comment', 'en', 'Reader comments'),   ('admin.nav.comment', 'fr', 'Commentaires des lecteurs'),
+  ('admin.nav.people', 'en', 'Users'),              ('admin.nav.people', 'fr', 'Utilisateurs')
 ) as v(slug, code, content)
 join local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
 on conflict (link, locale) do nothing;
@@ -1156,7 +1156,7 @@ from (values
   ('admin.nav.board',   '/admin/content/board',   15),
   ('admin.nav.article', '/admin/content/article', 16),
   ('admin.nav.comment', '/admin/content/comment', 17),
-  ('admin.nav.people',  '/admin/user',            18)
+  ('admin.nav.people',  '/admin/user',            110)
 ) as v(slug, href, sort_order)
 join local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
 where not exists (

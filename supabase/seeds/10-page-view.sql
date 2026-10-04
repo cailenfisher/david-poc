@@ -71,14 +71,14 @@ on conflict do nothing;
 insert into local_text (link, locale, content)
 select l.id, (select id from locale where code = v.code), v.content
 from (values
-  ('admin.nav.page_view', 'en', 'Visitors'),
-  ('admin.nav.page_view', 'fr', 'Visiteurs')
+  ('admin.nav.page_view', 'en', 'Readership'),
+  ('admin.nav.page_view', 'fr', 'Lectorat')
 ) as v(slug, code, content)
 join local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
 on conflict (link, locale) do nothing;
 
 insert into navigation_item (local_text_link_id, href, scope, sort_order, active)
-select l.id, '/admin/page-view', 'admin', 12, true
+select l.id, '/admin/page-view', 'admin', 19, true
 from local_text_link l
 where l.slug = 'admin.nav.page_view' and l.scope is null and l.entity_id is null
 on conflict (href, scope) do nothing;
