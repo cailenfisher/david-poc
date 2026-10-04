@@ -1,0 +1,1164 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- POC newsroom seed — "The Meridian"
+--
+-- A fictional daily, sized and shaped like a real small-metro paper, so the
+-- content module gets exercised against something with the proportions of an
+-- actual newsroom rather than one sample row.
+--
+-- Prose is original, written in wire-service register. The underlying events are
+-- real and current (late September 2026) because headline length, dateline
+-- behaviour and dek wrapping only get tested honestly by copy that reads like
+-- copy. No agency text is reproduced.
+--
+-- Conventions, per CLAUDE.md: no manual IDs, resolve foreign keys by slug,
+-- resolve locale IDs by code, and re-runnable throughout — `on conflict do
+-- nothing` where a unique constraint exists, `not exists` guards where one does
+-- not (article_block, article_byline, front_slot, live_update, comment,
+-- assignments and checklist state have no unique key to conflict on).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- ── Masthead ────────────────────────────────────────────────────────────────
+update publisher_profile set url = 'http://localhost:5173' where id = (select min(id) from publisher_profile);
+
+update local_text set content = 'The Meridian'
+where link = (select l.id from local_text_link l where l.scope = 'publisher_profile' and l.slug = 'name' limit 1)
+  and locale = (select id from locale where code = 'en');
+
+update local_text set content = 'Le Méridien'
+where link = (select l.id from local_text_link l where l.scope = 'publisher_profile' and l.slug = 'name' limit 1)
+  and locale = (select id from locale where code = 'fr');
+
+-- ── Sections ────────────────────────────────────────────────────────────────
+-- news/business/opinion/culture already exist from the module seed; world,
+-- politics and local nest under news, and sports plus science-health are new tops.
+insert into section (slug, ordinal, parent_section_id, active)
+select v.slug, v.ordinal, null, true
+from (values ('sports', 50), ('science-health', 30)) as v(slug, ordinal)
+on conflict (slug) do nothing;
+
+insert into section (slug, ordinal, parent_section_id, active)
+select v.slug, v.ordinal, (select id from section where slug = 'news'), true
+from (values ('world', 11), ('politics', 12), ('local', 13)) as v(slug, ordinal)
+on conflict (slug) do nothing;
+
+update section set ordinal = 10 where slug = 'news';
+update section set ordinal = 20 where slug = 'business';
+update section set ordinal = 40 where slug = 'culture';
+update section set ordinal = 60 where slug = 'opinion';
+
+insert into local_text_link (slug, scope, entity_id)
+select 'name', 'section', s.id from section s
+where s.slug in ('world', 'politics', 'local', 'sports', 'science-health')
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('world', 'en', 'World'),            ('world', 'fr', 'Monde'),
+  ('politics', 'en', 'Politics'),      ('politics', 'fr', 'Politique'),
+  ('local', 'en', 'Local'),            ('local', 'fr', 'Local'),
+  ('sports', 'en', 'Sports'),          ('sports', 'fr', 'Sports'),
+  ('science-health', 'en', 'Science & Health'),
+  ('science-health', 'fr', 'Sciences et santé')
+) as v(section_slug, code, content)
+join section s on s.slug = v.section_slug
+join local_text_link l on l.scope = 'section' and l.slug = 'name' and l.entity_id = s.id
+on conflict (link, locale) do nothing;
+
+-- ── Topics ──────────────────────────────────────────────────────────────────
+insert into topic (slug, active)
+select v.slug, true
+from (values ('elections'), ('middle-east'), ('energy'), ('artificial-intelligence'),
+             ('public-health'), ('monetary-policy'), ('labor'), ('climate')) as v(slug)
+on conflict (slug) do nothing;
+
+insert into local_text_link (slug, scope, entity_id)
+select 'name', 'topic', t.id from topic t on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('elections', 'en', 'Elections'),                      ('elections', 'fr', 'Élections'),
+  ('middle-east', 'en', 'Middle East'),                  ('middle-east', 'fr', 'Moyen-Orient'),
+  ('energy', 'en', 'Energy'),                            ('energy', 'fr', 'Énergie'),
+  ('artificial-intelligence', 'en', 'Artificial Intelligence'),
+  ('artificial-intelligence', 'fr', 'Intelligence artificielle'),
+  ('public-health', 'en', 'Public Health'),              ('public-health', 'fr', 'Santé publique'),
+  ('monetary-policy', 'en', 'Monetary Policy'),          ('monetary-policy', 'fr', 'Politique monétaire'),
+  ('labor', 'en', 'Labor'),                              ('labor', 'fr', 'Travail'),
+  ('climate', 'en', 'Climate'),                          ('climate', 'fr', 'Climat')
+) as v(topic_slug, code, content)
+join topic t on t.slug = v.topic_slug
+join local_text_link l on l.scope = 'topic' and l.slug = 'name' and l.entity_id = t.id
+on conflict (link, locale) do nothing;
+
+-- ── Tags ────────────────────────────────────────────────────────────────────
+insert into tag (slug, active)
+select v.slug, true
+from (values ('iraq'), ('ai-policy'), ('aviation-safety'), ('rental-market'),
+             ('city-council'), ('interest-rates')) as v(slug)
+on conflict (slug) do nothing;
+
+insert into local_text_link (slug, scope, entity_id)
+select 'name', 'tag', t.id from tag t on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('iraq', 'en', 'Iraq'),                       ('iraq', 'fr', 'Irak'),
+  ('ai-policy', 'en', 'AI policy'),             ('ai-policy', 'fr', 'Politique de l''IA'),
+  ('aviation-safety', 'en', 'Aviation safety'), ('aviation-safety', 'fr', 'Sécurité aérienne'),
+  ('rental-market', 'en', 'Rental market'),     ('rental-market', 'fr', 'Marché locatif'),
+  ('city-council', 'en', 'City council'),       ('city-council', 'fr', 'Conseil municipal'),
+  ('interest-rates', 'en', 'Interest rates'),   ('interest-rates', 'fr', 'Taux d''intérêt')
+) as v(tag_slug, code, content)
+join tag t on t.slug = v.tag_slug
+join local_text_link l on l.scope = 'tag' and l.slug = 'name' and l.entity_id = t.id
+on conflict (link, locale) do nothing;
+
+-- ── Staff ───────────────────────────────────────────────────────────────────
+insert into author_profile (slug, active, user_account_id)
+select v.slug, true, null
+from (values ('elena-marchetti'), ('david-okonkwo'), ('priya-raman'),
+             ('tomas-lindqvist'), ('maya-brennan'), ('jonah-feldman')) as v(slug)
+on conflict (slug) do nothing;
+
+-- The operator's own principal gets a byline, so the admin user is a real author.
+update author_profile
+set user_account_id = (select min(id) from user_account)
+where slug = 'maya-brennan' and user_account_id is null;
+
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'author_profile', a.id
+from author_profile a cross join (values ('name'), ('bio')) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('elena-marchetti', 'name', 'en', 'Elena Marchetti'),
+  ('elena-marchetti', 'name', 'fr', 'Elena Marchetti'),
+  ('elena-marchetti', 'bio', 'en', 'Elena Marchetti covers conflict and diplomacy for The Meridian. She has reported from Baghdad, Beirut and Brussels.'),
+  ('elena-marchetti', 'bio', 'fr', 'Elena Marchetti couvre les conflits et la diplomatie pour Le Méridien. Elle a été correspondante à Bagdad, Beyrouth et Bruxelles.'),
+  ('david-okonkwo', 'name', 'en', 'David Okonkwo'),
+  ('david-okonkwo', 'name', 'fr', 'David Okonkwo'),
+  ('david-okonkwo', 'bio', 'en', 'David Okonkwo is a political correspondent covering the federal government and technology regulation.'),
+  ('david-okonkwo', 'bio', 'fr', 'David Okonkwo est correspondant politique et couvre le gouvernement fédéral et la réglementation des technologies.'),
+  ('priya-raman', 'name', 'en', 'Priya Raman'),
+  ('priya-raman', 'name', 'fr', 'Priya Raman'),
+  ('priya-raman', 'bio', 'en', 'Priya Raman writes about central banks, currencies and the economics of energy.'),
+  ('priya-raman', 'bio', 'fr', 'Priya Raman écrit sur les banques centrales, les devises et l''économie de l''énergie.'),
+  ('tomas-lindqvist', 'name', 'en', 'Tomas Lindqvist'),
+  ('tomas-lindqvist', 'name', 'fr', 'Tomas Lindqvist'),
+  ('tomas-lindqvist', 'bio', 'en', 'Tomas Lindqvist reports on public health systems and medical research.'),
+  ('tomas-lindqvist', 'bio', 'fr', 'Tomas Lindqvist couvre les systèmes de santé publique et la recherche médicale.'),
+  ('maya-brennan', 'name', 'en', 'Maya Brennan'),
+  ('maya-brennan', 'name', 'fr', 'Maya Brennan'),
+  ('maya-brennan', 'bio', 'en', 'Maya Brennan is The Meridian''s city hall reporter, covering municipal government, transit and housing.'),
+  ('maya-brennan', 'bio', 'fr', 'Maya Brennan couvre l''hôtel de ville pour Le Méridien : administration municipale, transports et logement.'),
+  ('jonah-feldman', 'name', 'en', 'Jonah Feldman'),
+  ('jonah-feldman', 'name', 'fr', 'Jonah Feldman'),
+  ('jonah-feldman', 'bio', 'en', 'Jonah Feldman is a culture writer covering museums, music and the visual arts.'),
+  ('jonah-feldman', 'bio', 'fr', 'Jonah Feldman est journaliste culturel : musées, musique et arts visuels.')
+) as v(author_slug, copy_slug, code, content)
+join author_profile a on a.slug = v.author_slug
+join local_text_link l on l.scope = 'author_profile' and l.slug = v.copy_slug and l.entity_id = a.id
+on conflict (link, locale) do nothing;
+
+-- ── Articles ────────────────────────────────────────────────────────────────
+-- Eighteen stories spread across the workflow: twelve live on the site, one
+-- embargoed, one archived, and four still moving through the desk so the admin
+-- queue has something to show. `published_hours` is hours before now, which
+-- keeps the news sitemap's 48-hour window meaningful on every reseed.
+insert into article (article_status_id, canonical_slug, published_at, embargo_until, allow_comment)
+select (select id from article_status where slug = v.status),
+       v.slug,
+       case when v.published_hours is null then null
+            else now() - (v.published_hours || ' hours')::interval end,
+       case when v.embargo_hours is null then null
+            else now() + (v.embargo_hours || ' hours')::interval end,
+       v.allow_comment
+from (values
+  ('us-completes-iraq-troop-withdrawal',   'published',  3::int,  null::int, true),
+  ('tech-leaders-sign-ai-safety-standards','published',  6,       null,      true),
+  ('pilot-subdued-on-tel-aviv-flight',     'published',  9,       null,      true),
+  ('iran-rial-slides-to-record-low',       'published', 14,       null,      true),
+  ('spain-moves-to-ban-evictions',         'published', 20,       null,      true),
+  ('council-advances-transit-levy',        'published', 26,       null,      true),
+  ('museum-returns-benin-bronzes',         'published', 31,       null,      true),
+  ('settlers-riot-in-west-bank-village',   'published', 38,       null,      true),
+  ('airstrike-kills-hamas-commander',      'published', 44,       null,      true),
+  ('housing-authority-vacancy-audit',      'published', 52,       null,      true),
+  ('central-bank-holds-benchmark-rate',    'published', 61,       null,      true),
+  ('nurses-ratify-three-year-contract',    'published', 70,       null,      false),
+  ('city-marathon-course-record',          'published', 80,       null,      true),
+  ('quarterly-economic-outlook',           'published', null,     18,        true),
+  ('summer-festival-in-review',            'archived', 740,       null,      true),
+  ('port-authority-overtime-records',      'in_review', null,     null,      true),
+  ('school-board-budget-shortfall',        'draft',     null,     null,      true),
+  ('winter-transit-service-cuts',          'pitch',     null,     null,      true)
+) as v(slug, status, published_hours, embargo_hours, allow_comment)
+on conflict (canonical_slug) do nothing;
+
+-- Headline and dek. No article table carries either as a column — this is the
+-- LocalTextLink wiring doing the work the schema deliberately refuses to do.
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'article', a.id
+from article a cross join (values ('headline'), ('dek')) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'headline', 'en', 'Pentagon says last U.S. troops have left Iraq'),
+  ('us-completes-iraq-troop-withdrawal', 'dek', 'en', 'The final contingent flew out of an air base in the country''s north, closing a military presence that spanned more than two decades.'),
+  ('us-completes-iraq-troop-withdrawal', 'headline', 'fr', 'Le Pentagone annonce le départ des derniers soldats américains d''Irak'),
+  ('us-completes-iraq-troop-withdrawal', 'dek', 'fr', 'Le dernier contingent a quitté une base aérienne du nord du pays, mettant fin à une présence militaire de plus de vingt ans.'),
+
+  ('tech-leaders-sign-ai-safety-standards', 'headline', 'en', 'Trump and tech executives sign voluntary AI safety standards'),
+  ('tech-leaders-sign-ai-safety-standards', 'dek', 'en', 'The agreement commits the largest model developers to shared testing and disclosure practices, but carries no enforcement mechanism.'),
+  ('tech-leaders-sign-ai-safety-standards', 'headline', 'fr', 'Trump et les dirigeants de la tech signent des normes volontaires sur la sécurité de l''IA'),
+  ('tech-leaders-sign-ai-safety-standards', 'dek', 'fr', 'L''accord engage les principaux développeurs de modèles à des pratiques communes de test et de transparence, sans mécanisme contraignant.'),
+
+  ('pilot-subdued-on-tel-aviv-flight', 'headline', 'en', 'Crew and passenger subdue pilot who attacked colleague mid-flight'),
+  ('pilot-subdued-on-tel-aviv-flight', 'dek', 'en', 'The aircraft, bound for Tel Aviv, diverted to Saudi Arabia and landed without further injury, Israeli officials said.'),
+  ('pilot-subdued-on-tel-aviv-flight', 'headline', 'fr', 'L''équipage et un passager maîtrisent un pilote qui a agressé son collègue en vol'),
+  ('pilot-subdued-on-tel-aviv-flight', 'dek', 'fr', 'L''appareil, qui devait rejoindre Tel-Aviv, a été dérouté vers l''Arabie saoudite et s''est posé sans autre blessé, selon les autorités israéliennes.'),
+
+  ('iran-rial-slides-to-record-low', 'headline', 'en', 'Iranian rial slides past 2.5 million to the dollar'),
+  ('iran-rial-slides-to-record-low', 'dek', 'en', 'The currency has lost ground steadily as conflict and sanctions compound pressure on an economy already short of foreign reserves.'),
+  ('iran-rial-slides-to-record-low', 'headline', 'fr', 'Le rial iranien franchit la barre de 2,5 millions pour un dollar'),
+  ('iran-rial-slides-to-record-low', 'dek', 'fr', 'La monnaie recule sans interruption, le conflit et les sanctions aggravant la pression sur une économie déjà privée de réserves de change.'),
+
+  ('spain-moves-to-ban-evictions', 'headline', 'en', 'Spain moves to halt evictions through 2030'),
+  ('spain-moves-to-ban-evictions', 'dek', 'en', 'The measure would also renew residential leases automatically. It still requires approval by parliament, where the government lacks a majority.'),
+  ('spain-moves-to-ban-evictions', 'headline', 'fr', 'L''Espagne veut suspendre les expulsions jusqu''en 2030'),
+  ('spain-moves-to-ban-evictions', 'dek', 'fr', 'Le texte prévoit aussi la reconduction automatique des baux d''habitation. Il doit encore être approuvé par un parlement où le gouvernement n''a pas de majorité.'),
+
+  ('council-advances-transit-levy', 'headline', 'en', 'Council advances transit levy to November ballot'),
+  ('council-advances-transit-levy', 'dek', 'en', 'A 6-3 vote sends the measure to voters, who will decide whether to fund expanded bus service with a quarter-cent sales tax.'),
+  ('council-advances-transit-levy', 'headline', 'fr', 'Le conseil soumet la taxe sur les transports au scrutin de novembre'),
+  ('council-advances-transit-levy', 'dek', 'fr', 'Par six voix contre trois, le conseil renvoie aux électeurs la décision de financer l''extension du réseau de bus par une taxe de vente d''un quart de cent.'),
+
+  ('museum-returns-benin-bronzes', 'headline', 'en', 'City museum agrees to return Benin bronzes'),
+  ('museum-returns-benin-bronzes', 'dek', 'en', 'Eleven works will be transferred to Nigeria next spring under an agreement the museum''s director called overdue.'),
+  ('museum-returns-benin-bronzes', 'headline', 'fr', 'Le musée municipal accepte de restituer les bronzes du Bénin'),
+  ('museum-returns-benin-bronzes', 'dek', 'fr', 'Onze œuvres seront transférées au Nigeria au printemps prochain, au terme d''un accord que la directrice du musée juge tardif.'),
+
+  ('settlers-riot-in-west-bank-village', 'headline', 'en', 'Settlers riot in West Bank village, blocking family''s return'),
+  ('settlers-riot-in-west-bank-village', 'dek', 'en', 'More than 100 people entered Jalud overnight, residents said, preventing a displaced family from reaching their home.'),
+  ('settlers-riot-in-west-bank-village', 'headline', 'fr', 'Des colons sèment le trouble dans un village de Cisjordanie et empêchent le retour d''une famille'),
+  ('settlers-riot-in-west-bank-village', 'dek', 'fr', 'Plus d''une centaine de personnes sont entrées dans Jaloud durant la nuit, selon des habitants, empêchant une famille déplacée de regagner son domicile.'),
+
+  ('airstrike-kills-hamas-commander', 'headline', 'en', 'Israeli airstrike kills senior Hamas commander'),
+  ('airstrike-kills-hamas-commander', 'dek', 'en', 'The military identified the target as Izz al-Din al-Beik. Hamas did not immediately confirm the death.'),
+  ('airstrike-kills-hamas-commander', 'headline', 'fr', 'Une frappe israélienne tue un haut commandant du Hamas'),
+  ('airstrike-kills-hamas-commander', 'dek', 'fr', 'L''armée a identifié la cible comme étant Izz al-Din al-Beik. Le Hamas n''a pas confirmé ce décès dans l''immédiat.'),
+
+  ('housing-authority-vacancy-audit', 'headline', 'en', 'Audit finds 300 public housing units sitting empty'),
+  ('housing-authority-vacancy-audit', 'dek', 'en', 'The city auditor attributed most of the backlog to deferred repairs and a shortage of maintenance staff.'),
+  ('housing-authority-vacancy-audit', 'headline', 'fr', 'Un audit révèle 300 logements sociaux vacants'),
+  ('housing-authority-vacancy-audit', 'dek', 'fr', 'L''auditrice municipale attribue l''essentiel du retard à des réparations différées et à un manque de personnel d''entretien.'),
+
+  ('central-bank-holds-benchmark-rate', 'headline', 'en', 'Central bank holds benchmark rate for a third meeting'),
+  ('central-bank-holds-benchmark-rate', 'dek', 'en', 'Policymakers signalled no urgency to cut, pointing to services inflation that has not yet returned to target.'),
+  ('central-bank-holds-benchmark-rate', 'headline', 'fr', 'La banque centrale maintient son taux directeur pour la troisième réunion'),
+  ('central-bank-holds-benchmark-rate', 'dek', 'fr', 'Les responsables n''ont montré aucune hâte à baisser les taux, invoquant une inflation des services encore supérieure à la cible.'),
+
+  ('nurses-ratify-three-year-contract', 'headline', 'en', 'Regional hospital nurses ratify three-year contract'),
+  ('nurses-ratify-three-year-contract', 'dek', 'en', 'The agreement raises wages 14 percent over its term and sets minimum staffing ratios on medical-surgical floors.'),
+  ('nurses-ratify-three-year-contract', 'headline', 'fr', 'Les infirmières de l''hôpital régional ratifient une convention de trois ans'),
+  ('nurses-ratify-three-year-contract', 'dek', 'fr', 'L''accord prévoit une hausse des salaires de 14 % sur sa durée et fixe des ratios minimaux de personnel dans les services de médecine-chirurgie.'),
+
+  ('city-marathon-course-record', 'headline', 'en', 'Kiptoo breaks city marathon course record'),
+  ('city-marathon-course-record', 'dek', 'en', 'She finished in 2:19:44, taking 71 seconds off a mark that had stood since 2019.'),
+  ('city-marathon-course-record', 'headline', 'fr', 'Kiptoo bat le record du parcours du marathon de la ville'),
+  ('city-marathon-course-record', 'dek', 'fr', 'Elle a terminé en 2 h 19 min 44 s, retranchant 71 secondes à un record établi en 2019.'),
+
+  ('quarterly-economic-outlook', 'headline', 'en', 'Quarterly outlook: growth narrows but holds'),
+  ('quarterly-economic-outlook', 'dek', 'en', 'Embargoed until release. The forecast trims full-year growth by two tenths of a point.'),
+  ('quarterly-economic-outlook', 'headline', 'fr', 'Perspectives trimestrielles : une croissance plus étroite mais maintenue'),
+  ('quarterly-economic-outlook', 'dek', 'fr', 'Sous embargo jusqu''à publication. La prévision réduit la croissance annuelle de deux dixièmes de point.'),
+
+  ('summer-festival-in-review', 'headline', 'en', 'The summer festival, in review'),
+  ('summer-festival-in-review', 'dek', 'en', 'Attendance recovered to pre-2020 levels, though the main stage programme drew criticism.'),
+  ('summer-festival-in-review', 'headline', 'fr', 'Le festival d''été, bilan'),
+  ('summer-festival-in-review', 'dek', 'fr', 'La fréquentation a retrouvé ses niveaux d''avant 2020, mais la programmation de la grande scène a été critiquée.'),
+
+  ('port-authority-overtime-records', 'headline', 'en', 'Port authority overtime records show pattern of unlogged shifts'),
+  ('port-authority-overtime-records', 'dek', 'en', 'Documents obtained by The Meridian show supervisors approving hours that do not appear on any schedule.'),
+  ('port-authority-overtime-records', 'headline', 'fr', 'Les relevés d''heures supplémentaires du port révèlent des services non consignés'),
+  ('port-authority-overtime-records', 'dek', 'fr', 'Des documents obtenus par Le Méridien montrent des encadrants validant des heures absentes de tout planning.'),
+
+  ('school-board-budget-shortfall', 'headline', 'en', 'School board faces $18 million shortfall'),
+  ('school-board-budget-shortfall', 'dek', 'en', 'Draft. Enrolment decline and the end of federal relief funding account for most of the gap.'),
+  ('school-board-budget-shortfall', 'headline', 'fr', 'Le conseil scolaire fait face à un déficit de 18 millions de dollars'),
+  ('school-board-budget-shortfall', 'dek', 'fr', 'Brouillon. La baisse des effectifs et la fin des aides fédérales expliquent l''essentiel de l''écart.'),
+
+  ('winter-transit-service-cuts', 'headline', 'en', 'Winter service cuts on three bus routes'),
+  ('winter-transit-service-cuts', 'dek', 'en', 'Pitch. Worth checking whether the cuts track ridership or driver availability.'),
+  ('winter-transit-service-cuts', 'headline', 'fr', 'Réductions de service hivernal sur trois lignes de bus'),
+  ('winter-transit-service-cuts', 'dek', 'fr', 'Proposition. À vérifier : les coupes suivent-elles la fréquentation ou la disponibilité des conducteurs ?')
+) as v(article_slug, copy_slug, code, content)
+join article a on a.canonical_slug = v.article_slug
+join local_text_link l on l.scope = 'article' and l.slug = v.copy_slug and l.entity_id = a.id
+on conflict (link, locale) do nothing;
+
+-- ── Filing: sections, topics, tags, bylines ─────────────────────────────────
+insert into article_section (article_id, section_id)
+select a.id, s.id
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'world'),
+  ('us-completes-iraq-troop-withdrawal', 'news'),
+  ('tech-leaders-sign-ai-safety-standards', 'politics'),
+  ('pilot-subdued-on-tel-aviv-flight', 'world'),
+  ('iran-rial-slides-to-record-low', 'business'),
+  ('iran-rial-slides-to-record-low', 'world'),
+  ('spain-moves-to-ban-evictions', 'world'),
+  ('council-advances-transit-levy', 'local'),
+  ('museum-returns-benin-bronzes', 'culture'),
+  ('settlers-riot-in-west-bank-village', 'world'),
+  ('airstrike-kills-hamas-commander', 'world'),
+  ('housing-authority-vacancy-audit', 'local'),
+  ('central-bank-holds-benchmark-rate', 'business'),
+  ('nurses-ratify-three-year-contract', 'science-health'),
+  ('nurses-ratify-three-year-contract', 'local'),
+  ('city-marathon-course-record', 'sports'),
+  ('quarterly-economic-outlook', 'business'),
+  ('summer-festival-in-review', 'culture'),
+  ('port-authority-overtime-records', 'local'),
+  ('school-board-budget-shortfall', 'local'),
+  ('winter-transit-service-cuts', 'local')
+) as v(article_slug, section_slug)
+join article a on a.canonical_slug = v.article_slug
+join section s on s.slug = v.section_slug
+on conflict (article_id, section_id) do nothing;
+
+insert into article_topic (article_id, topic_id)
+select a.id, t.id
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'middle-east'),
+  ('tech-leaders-sign-ai-safety-standards', 'artificial-intelligence'),
+  ('pilot-subdued-on-tel-aviv-flight', 'middle-east'),
+  ('iran-rial-slides-to-record-low', 'middle-east'),
+  ('iran-rial-slides-to-record-low', 'energy'),
+  ('spain-moves-to-ban-evictions', 'housing'),
+  ('council-advances-transit-levy', 'transport'),
+  ('council-advances-transit-levy', 'local-government'),
+  ('settlers-riot-in-west-bank-village', 'middle-east'),
+  ('airstrike-kills-hamas-commander', 'middle-east'),
+  ('housing-authority-vacancy-audit', 'housing'),
+  ('housing-authority-vacancy-audit', 'local-government'),
+  ('central-bank-holds-benchmark-rate', 'monetary-policy'),
+  ('nurses-ratify-three-year-contract', 'labor'),
+  ('nurses-ratify-three-year-contract', 'public-health'),
+  ('quarterly-economic-outlook', 'monetary-policy'),
+  ('port-authority-overtime-records', 'labor'),
+  ('school-board-budget-shortfall', 'local-government'),
+  ('winter-transit-service-cuts', 'transport')
+) as v(article_slug, topic_slug)
+join article a on a.canonical_slug = v.article_slug
+join topic t on t.slug = v.topic_slug
+on conflict (article_id, topic_id) do nothing;
+
+insert into article_tag (article_id, tag_id)
+select a.id, t.id
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'iraq'),
+  ('tech-leaders-sign-ai-safety-standards', 'ai-policy'),
+  ('pilot-subdued-on-tel-aviv-flight', 'aviation-safety'),
+  ('spain-moves-to-ban-evictions', 'rental-market'),
+  ('council-advances-transit-levy', 'city-council'),
+  ('housing-authority-vacancy-audit', 'city-council'),
+  ('central-bank-holds-benchmark-rate', 'interest-rates'),
+  ('quarterly-economic-outlook', 'interest-rates')
+) as v(article_slug, tag_slug)
+join article a on a.canonical_slug = v.article_slug
+join tag t on t.slug = v.tag_slug
+on conflict (article_id, tag_id) do nothing;
+
+-- Byline order is editorial: position 1 is the lead name, which is why two of
+-- these carry a second author at position 2.
+insert into article_byline (article_id, author_profile_id, position)
+select a.id, p.id, v.position
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'elena-marchetti', 1),
+  ('us-completes-iraq-troop-withdrawal', 'david-okonkwo', 2),
+  ('tech-leaders-sign-ai-safety-standards', 'david-okonkwo', 1),
+  ('pilot-subdued-on-tel-aviv-flight', 'elena-marchetti', 1),
+  ('iran-rial-slides-to-record-low', 'priya-raman', 1),
+  ('spain-moves-to-ban-evictions', 'elena-marchetti', 1),
+  ('council-advances-transit-levy', 'maya-brennan', 1),
+  ('museum-returns-benin-bronzes', 'jonah-feldman', 1),
+  ('settlers-riot-in-west-bank-village', 'elena-marchetti', 1),
+  ('airstrike-kills-hamas-commander', 'elena-marchetti', 1),
+  ('housing-authority-vacancy-audit', 'maya-brennan', 1),
+  ('central-bank-holds-benchmark-rate', 'priya-raman', 1),
+  ('nurses-ratify-three-year-contract', 'tomas-lindqvist', 1),
+  ('nurses-ratify-three-year-contract', 'maya-brennan', 2),
+  ('city-marathon-course-record', 'jonah-feldman', 1),
+  ('quarterly-economic-outlook', 'priya-raman', 1),
+  ('summer-festival-in-review', 'jonah-feldman', 1),
+  ('port-authority-overtime-records', 'maya-brennan', 1),
+  ('school-board-budget-shortfall', 'maya-brennan', 1),
+  ('winter-transit-service-cuts', 'maya-brennan', 1)
+) as v(article_slug, author_slug, position)
+join article a on a.canonical_slug = v.article_slug
+join author_profile p on p.slug = v.author_slug
+where not exists (
+  select 1 from article_byline b
+  where b.article_id = a.id and b.author_profile_id = p.id
+);
+
+-- ── Article bodies ──────────────────────────────────────────────────────────
+-- Structure only in `content`; every word of prose is entity-bound copy keyed by
+-- the block's own id. Guarded by `not exists` on (article_id, position) rather
+-- than `on conflict`: that pair is indexed but not unique, so there is no
+-- conflict for Postgres to detect and the clause would silently re-insert.
+insert into article_block (article_id, block_type, position, content)
+select a.id, v.block_type::article_block_type, v.position, '{}'::jsonb
+from (values
+  ('us-completes-iraq-troop-withdrawal', 1, 'paragraph'),
+  ('us-completes-iraq-troop-withdrawal', 2, 'paragraph'),
+  ('us-completes-iraq-troop-withdrawal', 3, 'paragraph'),
+  ('us-completes-iraq-troop-withdrawal', 4, 'heading'),
+  ('us-completes-iraq-troop-withdrawal', 5, 'paragraph'),
+  ('us-completes-iraq-troop-withdrawal', 6, 'pullquote'),
+  ('us-completes-iraq-troop-withdrawal', 7, 'paragraph'),
+  ('tech-leaders-sign-ai-safety-standards', 1, 'paragraph'),
+  ('tech-leaders-sign-ai-safety-standards', 2, 'paragraph'),
+  ('tech-leaders-sign-ai-safety-standards', 3, 'heading'),
+  ('tech-leaders-sign-ai-safety-standards', 4, 'paragraph'),
+  ('tech-leaders-sign-ai-safety-standards', 5, 'paragraph'),
+  ('pilot-subdued-on-tel-aviv-flight', 1, 'paragraph'),
+  ('pilot-subdued-on-tel-aviv-flight', 2, 'paragraph'),
+  ('pilot-subdued-on-tel-aviv-flight', 3, 'paragraph'),
+  ('pilot-subdued-on-tel-aviv-flight', 4, 'paragraph'),
+  ('iran-rial-slides-to-record-low', 1, 'paragraph'),
+  ('iran-rial-slides-to-record-low', 2, 'paragraph'),
+  ('iran-rial-slides-to-record-low', 3, 'paragraph'),
+  ('iran-rial-slides-to-record-low', 4, 'paragraph'),
+  ('spain-moves-to-ban-evictions', 1, 'paragraph'),
+  ('spain-moves-to-ban-evictions', 2, 'paragraph'),
+  ('spain-moves-to-ban-evictions', 3, 'paragraph'),
+  ('spain-moves-to-ban-evictions', 4, 'paragraph'),
+  ('council-advances-transit-levy', 1, 'paragraph'),
+  ('council-advances-transit-levy', 2, 'paragraph'),
+  ('council-advances-transit-levy', 3, 'pullquote'),
+  ('council-advances-transit-levy', 4, 'paragraph'),
+  ('council-advances-transit-levy', 5, 'paragraph'),
+  ('museum-returns-benin-bronzes', 1, 'paragraph'),
+  ('museum-returns-benin-bronzes', 2, 'paragraph'),
+  ('museum-returns-benin-bronzes', 3, 'paragraph'),
+  ('museum-returns-benin-bronzes', 4, 'paragraph')
+) as v(article_slug, position, block_type)
+join article a on a.canonical_slug = v.article_slug
+-- Guarded on the article having no body at all rather than on (article_id, position).
+-- The admin editor inserts and reorders blocks, so positions are not stable, and a
+-- per-position guard re-seeds the whole body the moment an editor has moved anything.
+-- "This article already has blocks" is the condition that actually means "seeded".
+where not exists (select 1 from article_block b where b.article_id = a.id);
+
+insert into local_text_link (slug, scope, entity_id)
+select 'text', 'article_block', b.id from article_block b on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('us-completes-iraq-troop-withdrawal', 1, 'en', 'The Pentagon said Tuesday that the last American troops have left Iraq, ending a military presence that began with the 2003 invasion and outlasted two insurgencies, a civil war and the rise and territorial defeat of the Islamic State group.'),
+  ('us-completes-iraq-troop-withdrawal', 1, 'fr', 'Le Pentagone a annoncé mardi le départ des derniers soldats américains d''Irak, mettant fin à une présence militaire ouverte par l''invasion de 2003 et qui a survécu à deux insurrections, à une guerre civile et à l''essor puis à la défaite territoriale du groupe État islamique.'),
+  ('us-completes-iraq-troop-withdrawal', 2, 'en', 'The final contingent departed from an air base in northern Iraq, a defense official said, speaking on condition of anonymity to describe troop movements that had not been announced in advance. The withdrawal was carried out under an agreement reached between the Iraqi and American governments.'),
+  ('us-completes-iraq-troop-withdrawal', 2, 'fr', 'Le dernier contingent a quitté une base aérienne du nord de l''Irak, selon un responsable de la défense qui s''exprimait sous couvert d''anonymat pour décrire des mouvements de troupes qui n''avaient pas été annoncés. Le retrait s''est déroulé dans le cadre d''un accord conclu entre les gouvernements irakien et américain.'),
+  ('us-completes-iraq-troop-withdrawal', 3, 'en', 'At its height in 2007, the American force in Iraq numbered roughly 170,000. More than 4,400 U.S. service members died there. Estimates of Iraqi civilian deaths over the same period range from about 190,000 to more than 300,000, depending on methodology.'),
+  ('us-completes-iraq-troop-withdrawal', 3, 'fr', 'À son apogée, en 2007, le contingent américain en Irak comptait environ 170 000 militaires. Plus de 4 400 soldats américains y ont perdu la vie. Les estimations des morts civils irakiens sur la même période vont d''environ 190 000 à plus de 300 000, selon la méthodologie retenue.'),
+  ('us-completes-iraq-troop-withdrawal', 4, 'en', 'What the agreement leaves behind'),
+  ('us-completes-iraq-troop-withdrawal', 4, 'fr', 'Ce que laisse l''accord'),
+  ('us-completes-iraq-troop-withdrawal', 5, 'en', 'A small number of American personnel will remain attached to the embassy in Baghdad in advisory and security-cooperation roles, the official said. Those positions fall outside the troop presence covered by the withdrawal agreement and are not counted as deployed forces.'),
+  ('us-completes-iraq-troop-withdrawal', 5, 'fr', 'Un petit nombre de personnels américains resteront rattachés à l''ambassade de Bagdad, dans des fonctions de conseil et de coopération sécuritaire, a précisé ce responsable. Ces postes n''entrent pas dans la présence militaire visée par l''accord de retrait et ne sont pas comptés comme des forces déployées.'),
+  ('us-completes-iraq-troop-withdrawal', 6, 'en', 'The question was never whether we would leave. It was what the Iraqi state would be able to hold once we did.'),
+  ('us-completes-iraq-troop-withdrawal', 6, 'fr', 'La question n''a jamais été de savoir si nous partirions. Elle était de savoir ce que l''État irakien serait capable de tenir une fois que nous serions partis.'),
+  ('us-completes-iraq-troop-withdrawal', 7, 'en', 'Iraqi officials have said the country''s security forces are prepared to operate independently, while acknowledging continued gaps in air support and intelligence. Analysts have pointed to the same two areas as the likeliest sources of strain in the first year without an American presence.'),
+  ('us-completes-iraq-troop-withdrawal', 7, 'fr', 'Les responsables irakiens affirment que les forces de sécurité du pays sont prêtes à opérer de façon autonome, tout en reconnaissant des lacunes persistantes en matière d''appui aérien et de renseignement. Les analystes désignent ces deux mêmes domaines comme les sources de tension les plus probables durant la première année sans présence américaine.'),
+
+  ('tech-leaders-sign-ai-safety-standards', 1, 'en', 'President Trump and the chief executives of the largest artificial intelligence companies signed a set of voluntary safety standards on Monday, committing their firms to shared testing practices and public disclosure of certain model capabilities.'),
+  ('tech-leaders-sign-ai-safety-standards', 1, 'fr', 'Le président Trump et les dirigeants des plus grandes entreprises d''intelligence artificielle ont signé lundi une série de normes volontaires de sécurité, engageant leurs sociétés à des pratiques de test communes et à la publication de certaines capacités de leurs modèles.'),
+  ('tech-leaders-sign-ai-safety-standards', 2, 'en', 'Attendees included Elon Musk of SpaceX, Mark Zuckerberg of Meta and Dario Amodei of Anthropic. The document is not a regulation and carries no penalty for a company that departs from it.'),
+  ('tech-leaders-sign-ai-safety-standards', 2, 'fr', 'Parmi les participants figuraient Elon Musk, de SpaceX, Mark Zuckerberg, de Meta, et Dario Amodei, d''Anthropic. Le document n''est pas un règlement et ne prévoit aucune sanction pour une entreprise qui s''en écarterait.'),
+  ('tech-leaders-sign-ai-safety-standards', 3, 'en', 'Enforcement remains the open question'),
+  ('tech-leaders-sign-ai-safety-standards', 3, 'fr', 'L''application reste la question en suspens'),
+  ('tech-leaders-sign-ai-safety-standards', 4, 'en', 'Researchers who have pressed for binding rules described the agreement as a floor rather than a settlement. Voluntary commitments of this kind have historically held while they aligned with commercial incentives and eroded when they did not, several said.'),
+  ('tech-leaders-sign-ai-safety-standards', 4, 'fr', 'Les chercheurs qui plaident pour des règles contraignantes y voient un plancher plutôt qu''un règlement définitif. Plusieurs ont rappelé que les engagements volontaires de ce type ont tenu tant qu''ils coïncidaient avec les intérêts commerciaux, et se sont effrités dès que ce n''était plus le cas.'),
+  ('tech-leaders-sign-ai-safety-standards', 5, 'en', 'Legislation establishing a federal licensing regime for frontier models has been introduced in both chambers but has not advanced out of committee. Aides in both parties said the standards signed Monday reduce the near-term pressure to act.'),
+  ('tech-leaders-sign-ai-safety-standards', 5, 'fr', 'Des propositions de loi instaurant un régime fédéral d''autorisation pour les modèles de pointe ont été déposées dans les deux chambres, sans sortir de commission. Des collaborateurs des deux partis estiment que les normes signées lundi réduisent la pression à court terme pour légiférer.'),
+
+  ('pilot-subdued-on-tel-aviv-flight', 1, 'en', 'A pilot stabbed a colleague and attempted to bring down a passenger aircraft bound for Tel Aviv, Israeli authorities said, before a passenger and members of the cabin crew forced their way into the cockpit and restrained him.'),
+  ('pilot-subdued-on-tel-aviv-flight', 1, 'fr', 'Un pilote a poignardé un collègue et tenté de faire s''écraser un avion de ligne à destination de Tel-Aviv, selon les autorités israéliennes, avant qu''un passager et des membres de l''équipage ne forcent l''accès au poste de pilotage et ne le maîtrisent.'),
+  ('pilot-subdued-on-tel-aviv-flight', 2, 'en', 'The aircraft diverted to Saudi Arabia and landed without further injury. The wounded pilot was taken to a hospital; officials did not describe his condition beyond saying he was conscious on arrival.'),
+  ('pilot-subdued-on-tel-aviv-flight', 2, 'fr', 'L''appareil a été dérouté vers l''Arabie saoudite et s''est posé sans autre blessé. Le pilote blessé a été transporté à l''hôpital ; les autorités n''ont pas détaillé son état, précisant seulement qu''il était conscient à son arrivée.'),
+  ('pilot-subdued-on-tel-aviv-flight', 3, 'en', 'Israeli officials characterised the act as deliberate and said an investigation was underway in coordination with Saudi authorities. No group has claimed responsibility and investigators have not publicly identified a motive.'),
+  ('pilot-subdued-on-tel-aviv-flight', 3, 'fr', 'Les responsables israéliens ont qualifié l''acte de délibéré et indiqué qu''une enquête était en cours, en coordination avec les autorités saoudiennes. Aucun groupe n''a revendiqué les faits et les enquêteurs n''ont pas rendu public de mobile.'),
+  ('pilot-subdued-on-tel-aviv-flight', 4, 'en', 'Cockpit doors on commercial aircraft were reinforced and locked by procedure after 2001, a change that has twice complicated efforts by crews to intervene against a pilot already inside. Regulators in several jurisdictions have since required a second crew member to be present whenever one pilot leaves.'),
+  ('pilot-subdued-on-tel-aviv-flight', 4, 'fr', 'Les portes de poste de pilotage des avions commerciaux ont été renforcées et verrouillées par procédure après 2001, un changement qui a compliqué à deux reprises l''intervention d''équipages contre un pilote déjà à l''intérieur. Depuis, les régulateurs de plusieurs pays imposent la présence d''un second membre d''équipage dès qu''un pilote quitte le poste.'),
+
+  ('iran-rial-slides-to-record-low', 1, 'en', 'The Iranian rial traded at more than 2.5 million to the dollar on open-market desks in Tehran, a record low, as the economic cost of the conflict with the United States and Israel continued to accumulate.'),
+  ('iran-rial-slides-to-record-low', 1, 'fr', 'Le rial iranien s''échangeait à plus de 2,5 millions pour un dollar sur les bureaux de change de Téhéran, un plus bas historique, le coût économique du conflit avec les États-Unis et Israël continuant de s''accumuler.'),
+  ('iran-rial-slides-to-record-low', 2, 'en', 'The currency has no single official rate. The government maintains a subsidised rate for imports of food and medicine, while households and most businesses transact at the open-market rate, which is the figure that tracks sentiment.'),
+  ('iran-rial-slides-to-record-low', 2, 'fr', 'La monnaie n''a pas de taux officiel unique. Le gouvernement maintient un taux subventionné pour les importations de produits alimentaires et de médicaments, tandis que les ménages et la plupart des entreprises opèrent au taux du marché libre, celui qui reflète le sentiment général.'),
+  ('iran-rial-slides-to-record-low', 3, 'en', 'Economists in Tehran attribute the decline to a shortage of accessible foreign reserves rather than to money printing alone. Oil revenue continues to arrive, they said, but a growing share of it is held in accounts the central bank cannot readily draw on.'),
+  ('iran-rial-slides-to-record-low', 3, 'fr', 'Les économistes de Téhéran attribuent ce recul à une pénurie de réserves de change accessibles plutôt qu''à la seule création monétaire. Les recettes pétrolières continuent d''arriver, expliquent-ils, mais une part croissante est détenue sur des comptes auxquels la banque centrale ne peut pas facilement accéder.'),
+  ('iran-rial-slides-to-record-low', 4, 'en', 'For households the effect is measured in imported goods. Prices for pharmaceuticals, vehicle parts and some staple foods have risen faster than the headline inflation rate for three consecutive quarters.'),
+  ('iran-rial-slides-to-record-low', 4, 'fr', 'Pour les ménages, l''effet se mesure sur les produits importés. Les prix des médicaments, des pièces automobiles et de certains aliments de base augmentent plus vite que l''inflation d''ensemble depuis trois trimestres consécutifs.'),
+
+  ('spain-moves-to-ban-evictions', 1, 'en', 'The Spanish government announced a prohibition on residential evictions through 2030, paired with the automatic renewal of existing rental contracts, in what housing officials described as an emergency response to a sustained shortage of affordable units.'),
+  ('spain-moves-to-ban-evictions', 1, 'fr', 'Le gouvernement espagnol a annoncé l''interdiction des expulsions de logements jusqu''en 2030, assortie de la reconduction automatique des baux en cours, une mesure que les responsables du logement présentent comme une réponse d''urgence à une pénurie durable de logements abordables.'),
+  ('spain-moves-to-ban-evictions', 2, 'en', 'The proposal requires approval by parliament, where the governing coalition does not hold a majority and has depended on regional parties to pass budget legislation.'),
+  ('spain-moves-to-ban-evictions', 2, 'fr', 'Le texte doit être approuvé par le parlement, où la coalition au pouvoir ne dispose pas de majorité et a dû s''appuyer sur des partis régionaux pour faire adopter ses budgets.'),
+  ('spain-moves-to-ban-evictions', 3, 'en', 'Landlord associations said the measure would withdraw supply from the market by making tenancies effectively indefinite. Tenant unions, which have organised rent strikes in Barcelona and Madrid over the past two years, called the duration insufficient.'),
+  ('spain-moves-to-ban-evictions', 3, 'fr', 'Les associations de propriétaires estiment que la mesure retirera de l''offre au marché en rendant les baux de fait indéfinis. Les syndicats de locataires, qui ont organisé des grèves des loyers à Barcelone et à Madrid ces deux dernières années, jugent la durée insuffisante.'),
+  ('spain-moves-to-ban-evictions', 4, 'en', 'Spain has among the lowest shares of social housing in western Europe, at roughly 2.5 percent of the total stock. Successive governments have announced construction targets; none has met one.'),
+  ('spain-moves-to-ban-evictions', 4, 'fr', 'L''Espagne compte l''une des plus faibles proportions de logements sociaux d''Europe occidentale, environ 2,5 % du parc total. Les gouvernements successifs ont annoncé des objectifs de construction ; aucun ne les a atteints.'),
+
+  ('council-advances-transit-levy', 1, 'en', 'The city council voted 6-3 on Tuesday to place a transit funding measure on the November ballot, sending to voters the question of whether to raise the sales tax by a quarter of a cent to pay for expanded bus service.'),
+  ('council-advances-transit-levy', 1, 'fr', 'Le conseil municipal a voté mardi par six voix contre trois l''inscription d''une mesure de financement des transports au scrutin de novembre, soumettant aux électeurs la question d''une hausse de la taxe de vente d''un quart de cent pour financer l''extension du réseau de bus.'),
+  ('council-advances-transit-levy', 2, 'en', 'The measure would fund fifteen-minute headways on six routes that currently run every half hour, and would restore Sunday service on two others cut in 2021. Transit staff put the annual cost at $31 million against projected receipts of $34 million.'),
+  ('council-advances-transit-levy', 2, 'fr', 'La mesure financerait un passage toutes les quinze minutes sur six lignes desservies actuellement toutes les demi-heures, et rétablirait le service du dimanche sur deux autres supprimé en 2021. Les services des transports chiffrent le coût annuel à 31 millions de dollars, pour des recettes prévues de 34 millions.'),
+  ('council-advances-transit-levy', 3, 'en', 'Frequency is the whole service. A bus every half hour is a bus you plan your day around; a bus every fifteen minutes is one you just take.'),
+  ('council-advances-transit-levy', 3, 'fr', 'La fréquence, c''est tout le service. Un bus toutes les demi-heures, c''est un bus autour duquel on organise sa journée ; un bus toutes les quinze minutes, c''est un bus qu''on prend, simplement.'),
+  ('council-advances-transit-levy', 4, 'en', 'The three dissenting members objected to the funding mechanism rather than the service plan, arguing that a sales tax falls hardest on the low-income riders the expansion is meant to serve.'),
+  ('council-advances-transit-levy', 4, 'fr', 'Les trois élus dissidents ont contesté le mode de financement plutôt que le plan de service, estimant qu''une taxe de vente pèse le plus lourdement sur les usagers à faibles revenus que l''extension est censée servir.'),
+  ('council-advances-transit-levy', 5, 'en', 'A similar measure failed in 2018 with 47 percent of the vote. Supporters said the current proposal differs in naming the specific routes affected, a change they attributed to criticism of the earlier campaign.'),
+  ('council-advances-transit-levy', 5, 'fr', 'Une mesure similaire avait échoué en 2018 avec 47 % des voix. Ses promoteurs soulignent que la proposition actuelle désigne nommément les lignes concernées, un changement qu''ils attribuent aux critiques adressées à la campagne précédente.'),
+
+  ('museum-returns-benin-bronzes', 1, 'en', 'The city museum will transfer eleven Benin bronzes to Nigeria next spring, resolving a claim first filed in 2021 and ending the museum''s holding of objects taken during the British punitive expedition of 1897.'),
+  ('museum-returns-benin-bronzes', 1, 'fr', 'Le musée municipal transférera onze bronzes du Bénin au Nigeria au printemps prochain, réglant une revendication déposée en 2021 et mettant fin à la détention par le musée d''objets pris lors de l''expédition punitive britannique de 1897.'),
+  ('museum-returns-benin-bronzes', 2, 'en', 'The museum''s director called the transfer overdue and said the institution had stopped treating provenance as a legal question to be defended. Three of the eleven works had been on continuous display since 1954.'),
+  ('museum-returns-benin-bronzes', 2, 'fr', 'La directrice du musée a jugé cette restitution tardive et indiqué que l''institution avait cessé de traiter la provenance comme une question juridique à défendre. Trois des onze œuvres étaient exposées sans interruption depuis 1954.'),
+  ('museum-returns-benin-bronzes', 3, 'en', 'Under the agreement, Nigeria''s National Commission for Museums and Monuments takes title to the works. A loan arrangement will allow four of them to return on temporary exhibition within five years.'),
+  ('museum-returns-benin-bronzes', 3, 'fr', 'Aux termes de l''accord, la Commission nationale des musées et monuments du Nigeria devient propriétaire des œuvres. Une convention de prêt permettra à quatre d''entre elles de revenir en exposition temporaire d''ici cinq ans.'),
+  ('museum-returns-benin-bronzes', 4, 'en', 'The museum holds roughly 400 further objects whose provenance records are incomplete. The director said a full audit would be published, with results released as each case is resolved rather than at the end.'),
+  ('museum-returns-benin-bronzes', 4, 'fr', 'Le musée conserve environ 400 autres objets dont les dossiers de provenance sont incomplets. La directrice a annoncé la publication d''un audit complet, dont les résultats seront communiqués au fur et à mesure du règlement de chaque cas plutôt qu''à la fin.')
+) as v(article_slug, position, code, content)
+join article a on a.canonical_slug = v.article_slug
+join article_block b on b.article_id = a.id and b.position = v.position
+join local_text_link l on l.scope = 'article_block' and l.slug = 'text' and l.entity_id = b.id
+on conflict (link, locale) do nothing;
+
+-- Remaining bodies: briefs, the desk's in-progress stories and the archived piece.
+insert into article_block (article_id, block_type, position, content)
+select a.id, v.block_type::article_block_type, v.position, '{}'::jsonb
+from (values
+  ('settlers-riot-in-west-bank-village', 1, 'paragraph'),
+  ('settlers-riot-in-west-bank-village', 2, 'paragraph'),
+  ('settlers-riot-in-west-bank-village', 3, 'paragraph'),
+  ('airstrike-kills-hamas-commander', 1, 'paragraph'),
+  ('airstrike-kills-hamas-commander', 2, 'paragraph'),
+  ('airstrike-kills-hamas-commander', 3, 'paragraph'),
+  ('housing-authority-vacancy-audit', 1, 'paragraph'),
+  ('housing-authority-vacancy-audit', 2, 'paragraph'),
+  ('housing-authority-vacancy-audit', 3, 'paragraph'),
+  ('central-bank-holds-benchmark-rate', 1, 'paragraph'),
+  ('central-bank-holds-benchmark-rate', 2, 'paragraph'),
+  ('central-bank-holds-benchmark-rate', 3, 'paragraph'),
+  ('nurses-ratify-three-year-contract', 1, 'paragraph'),
+  ('nurses-ratify-three-year-contract', 2, 'paragraph'),
+  ('nurses-ratify-three-year-contract', 3, 'paragraph'),
+  ('city-marathon-course-record', 1, 'paragraph'),
+  ('city-marathon-course-record', 2, 'paragraph'),
+  ('quarterly-economic-outlook', 1, 'paragraph'),
+  ('quarterly-economic-outlook', 2, 'paragraph'),
+  ('summer-festival-in-review', 1, 'paragraph'),
+  ('summer-festival-in-review', 2, 'paragraph'),
+  ('port-authority-overtime-records', 1, 'paragraph'),
+  ('port-authority-overtime-records', 2, 'paragraph'),
+  ('port-authority-overtime-records', 3, 'paragraph'),
+  ('school-board-budget-shortfall', 1, 'paragraph'),
+  ('school-board-budget-shortfall', 2, 'paragraph'),
+  ('winter-transit-service-cuts', 1, 'paragraph')
+) as v(article_slug, position, block_type)
+join article a on a.canonical_slug = v.article_slug
+-- Guarded on the article having no body at all rather than on (article_id, position).
+-- The admin editor inserts and reorders blocks, so positions are not stable, and a
+-- per-position guard re-seeds the whole body the moment an editor has moved anything.
+-- "This article already has blocks" is the condition that actually means "seeded".
+where not exists (select 1 from article_block b where b.article_id = a.id);
+
+insert into local_text_link (slug, scope, entity_id)
+select 'text', 'article_block', b.id from article_block b on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('settlers-riot-in-west-bank-village', 1, 'en', 'More than 100 Israeli settlers entered the West Bank village of Jalud overnight Monday, residents said, preventing a displaced Palestinian family from returning to their home and setting fire to an outbuilding.'),
+  ('settlers-riot-in-west-bank-village', 1, 'fr', 'Plus d''une centaine de colons israéliens sont entrés dans le village cisjordanien de Jaloud durant la nuit de lundi, selon des habitants, empêchant une famille palestinienne déplacée de regagner son domicile et incendiant une dépendance.'),
+  ('settlers-riot-in-west-bank-village', 2, 'en', 'Israeli security forces arrived after several hours and dispersed the crowd, residents said. The military said it was reviewing the incident and that no arrests had been made by Tuesday afternoon.'),
+  ('settlers-riot-in-west-bank-village', 2, 'fr', 'Les forces de sécurité israéliennes sont arrivées après plusieurs heures et ont dispersé la foule, selon les habitants. L''armée a indiqué examiner l''incident et qu''aucune arrestation n''avait eu lieu mardi après-midi.'),
+  ('settlers-riot-in-west-bank-village', 3, 'en', 'Monitoring groups have recorded a sustained rise in settler violence in the northern West Bank since 2023, with a small fraction of reported incidents resulting in charges.'),
+  ('settlers-riot-in-west-bank-village', 3, 'fr', 'Les organisations de suivi enregistrent une hausse continue des violences de colons dans le nord de la Cisjordanie depuis 2023, une faible part des incidents signalés donnant lieu à des poursuites.'),
+
+  ('airstrike-kills-hamas-commander', 1, 'en', 'An Israeli airstrike killed a senior Hamas commander, the military said, identifying the target as Izz al-Din al-Beik and describing him as responsible for coordinating rocket operations.'),
+  ('airstrike-kills-hamas-commander', 1, 'fr', 'Une frappe aérienne israélienne a tué un haut commandant du Hamas, a annoncé l''armée, identifiant la cible comme Izz al-Din al-Beik et le présentant comme responsable de la coordination des tirs de roquettes.'),
+  ('airstrike-kills-hamas-commander', 2, 'en', 'Hamas did not immediately confirm the death. The strike hit a residential building; local health officials reported additional casualties without specifying how many were combatants.'),
+  ('airstrike-kills-hamas-commander', 2, 'fr', 'Le Hamas n''a pas confirmé ce décès dans l''immédiat. La frappe a touché un immeuble d''habitation ; les responsables sanitaires locaux ont fait état d''autres victimes sans préciser combien étaient des combattants.'),
+  ('airstrike-kills-hamas-commander', 3, 'en', 'The military has named more than two dozen commanders killed in similar strikes over the past year. Independent verification of the identifications has generally not been possible.'),
+  ('airstrike-kills-hamas-commander', 3, 'fr', 'L''armée a nommé plus d''une vingtaine de commandants tués lors de frappes similaires au cours de l''année écoulée. La vérification indépendante de ces identifications n''a généralement pas été possible.'),
+
+  ('housing-authority-vacancy-audit', 1, 'en', 'Roughly 300 public housing units stood vacant at the end of the last fiscal year while the waiting list held more than 4,000 households, according to an audit released Monday by the city auditor.'),
+  ('housing-authority-vacancy-audit', 1, 'fr', 'Environ 300 logements sociaux étaient vacants à la fin du dernier exercice budgétaire, alors que la liste d''attente comptait plus de 4 000 ménages, selon un audit publié lundi par l''auditrice municipale.'),
+  ('housing-authority-vacancy-audit', 2, 'en', 'The audit attributed most of the backlog to deferred repairs and a maintenance staff operating at 71 percent of authorised headcount. Average turnaround between tenancies was 94 days, against a target of 30.'),
+  ('housing-authority-vacancy-audit', 2, 'fr', 'L''audit attribue l''essentiel du retard à des réparations différées et à un service d''entretien fonctionnant à 71 % de ses effectifs autorisés. Le délai moyen de remise en location était de 94 jours, pour un objectif de 30.'),
+  ('housing-authority-vacancy-audit', 3, 'en', 'The housing authority''s director accepted the findings and said eleven maintenance positions had been filled since the audit period closed.'),
+  ('housing-authority-vacancy-audit', 3, 'fr', 'Le directeur de l''office du logement a accepté les conclusions et indiqué que onze postes d''entretien avaient été pourvus depuis la clôture de la période auditée.'),
+
+  ('central-bank-holds-benchmark-rate', 1, 'en', 'The central bank held its benchmark rate unchanged for a third consecutive meeting, citing services inflation that remains above target despite continued moderation in goods prices.'),
+  ('central-bank-holds-benchmark-rate', 1, 'fr', 'La banque centrale a maintenu son taux directeur inchangé pour la troisième réunion consécutive, invoquant une inflation des services qui reste supérieure à la cible malgré la modération continue des prix des biens.'),
+  ('central-bank-holds-benchmark-rate', 2, 'en', 'The accompanying statement dropped a reference to the timing of future adjustments that had appeared in the two previous releases, a change analysts read as deliberate.'),
+  ('central-bank-holds-benchmark-rate', 2, 'fr', 'Le communiqué a supprimé une référence au calendrier des ajustements futurs qui figurait dans les deux publications précédentes, un changement que les analystes jugent délibéré.'),
+  ('central-bank-holds-benchmark-rate', 3, 'en', 'Two members dissented in favour of a quarter-point cut, the first split vote in fourteen months.'),
+  ('central-bank-holds-benchmark-rate', 3, 'fr', 'Deux membres ont voté contre, en faveur d''une baisse d''un quart de point, premier vote divisé en quatorze mois.'),
+
+  ('nurses-ratify-three-year-contract', 1, 'en', 'Nurses at the regional hospital ratified a three-year contract on Sunday, ending a dispute that had twice brought the unit to within a week of a strike.'),
+  ('nurses-ratify-three-year-contract', 1, 'fr', 'Les infirmières de l''hôpital régional ont ratifié dimanche une convention de trois ans, mettant fin à un conflit qui avait par deux fois approché d''une semaine le déclenchement d''une grève.'),
+  ('nurses-ratify-three-year-contract', 2, 'en', 'The agreement raises wages 14 percent over its term and establishes minimum staffing ratios on medical-surgical floors, a provision the union had identified as its central demand.'),
+  ('nurses-ratify-three-year-contract', 2, 'fr', 'L''accord prévoit une hausse des salaires de 14 % sur sa durée et instaure des ratios minimaux de personnel dans les services de médecine-chirurgie, une disposition que le syndicat avait désignée comme sa revendication centrale.'),
+  ('nurses-ratify-three-year-contract', 3, 'en', 'The ratification vote passed with 81 percent in favour on a turnout of 1,340 of 1,580 eligible members.'),
+  ('nurses-ratify-three-year-contract', 3, 'fr', 'Le vote de ratification a été acquis par 81 % des voix, avec une participation de 1 340 des 1 580 membres éligibles.'),
+
+  ('city-marathon-course-record', 1, 'en', 'Grace Kiptoo won the city marathon in 2:19:44, breaking a course record that had stood since 2019 by 71 seconds.'),
+  ('city-marathon-course-record', 1, 'fr', 'Grace Kiptoo a remporté le marathon de la ville en 2 h 19 min 44 s, battant de 71 secondes un record du parcours établi en 2019.'),
+  ('city-marathon-course-record', 2, 'en', 'Conditions were cool and still, with temperatures near 9 degrees Celsius at the start. Kiptoo ran alone from the 30-kilometre mark and finished more than two minutes clear of the field.'),
+  ('city-marathon-course-record', 2, 'fr', 'Les conditions étaient fraîches et sans vent, avec près de 9 degrés Celsius au départ. Kiptoo a couru seule à partir du 30e kilomètre et a terminé avec plus de deux minutes d''avance sur ses poursuivantes.'),
+
+  ('quarterly-economic-outlook', 1, 'en', 'The quarterly outlook trims projected full-year growth by two tenths of a percentage point, attributing the revision to weaker business investment rather than to household consumption.'),
+  ('quarterly-economic-outlook', 1, 'fr', 'Les perspectives trimestrielles réduisent la croissance annuelle prévue de deux dixièmes de point de pourcentage, attribuant cette révision à un affaiblissement de l''investissement des entreprises plutôt qu''à la consommation des ménages.'),
+  ('quarterly-economic-outlook', 2, 'en', 'This article is embargoed until the forecast''s scheduled release and should not be visible to readers before then.'),
+  ('quarterly-economic-outlook', 2, 'fr', 'Cet article est sous embargo jusqu''à la publication prévue de la prévision et ne doit pas être visible des lecteurs avant cette date.'),
+
+  ('summer-festival-in-review', 1, 'en', 'Attendance at the summer festival recovered to pre-2020 levels, organisers said, with 112,000 admissions across nine days.'),
+  ('summer-festival-in-review', 1, 'fr', 'La fréquentation du festival d''été a retrouvé ses niveaux d''avant 2020, selon les organisateurs, avec 112 000 entrées sur neuf jours.'),
+  ('summer-festival-in-review', 2, 'en', 'The main stage programme drew sustained criticism for leaning on returning headliners, a complaint the artistic director acknowledged while citing booking costs.'),
+  ('summer-festival-in-review', 2, 'fr', 'La programmation de la grande scène a été vivement critiquée pour sa dépendance aux têtes d''affiche récurrentes, un reproche que le directeur artistique a reconnu en invoquant le coût des cachets.'),
+
+  ('port-authority-overtime-records', 1, 'en', 'Overtime records obtained by The Meridian show port authority supervisors approving more than 9,000 hours over two years that correspond to no entry on any published shift schedule.'),
+  ('port-authority-overtime-records', 1, 'fr', 'Des relevés d''heures supplémentaires obtenus par Le Méridien montrent que des encadrants du port ont validé plus de 9 000 heures sur deux ans ne correspondant à aucune entrée des plannings publiés.'),
+  ('port-authority-overtime-records', 2, 'en', 'IN REVIEW — the authority has not yet responded to a detailed list of questions sent eight days ago. Do not publish before that response or a documented refusal.'),
+  ('port-authority-overtime-records', 2, 'fr', 'EN RELECTURE — le port n''a pas encore répondu à une liste détaillée de questions envoyée il y a huit jours. Ne pas publier avant cette réponse ou un refus documenté.'),
+  ('port-authority-overtime-records', 3, 'en', 'Two former schedulers described the practice as routine. A third disputed that characterisation. Their accounts need to be reconciled before this runs.'),
+  ('port-authority-overtime-records', 3, 'fr', 'Deux anciens planificateurs décrivent cette pratique comme courante. Un troisième contredit cette présentation. Leurs témoignages doivent être recoupés avant publication.'),
+
+  ('school-board-budget-shortfall', 1, 'en', 'The school board faces an $18 million shortfall in the coming fiscal year, driven primarily by declining enrolment and the expiry of federal relief funding.'),
+  ('school-board-budget-shortfall', 1, 'fr', 'Le conseil scolaire fait face à un déficit de 18 millions de dollars pour le prochain exercice, principalement sous l''effet de la baisse des effectifs et de l''expiration des aides fédérales.'),
+  ('school-board-budget-shortfall', 2, 'en', 'DRAFT — still need the per-school breakdown and a comment from the board president. Enrolment figures are confirmed; the federal number is not.'),
+  ('school-board-budget-shortfall', 2, 'fr', 'BROUILLON — il manque encore la ventilation par établissement et une réaction du président du conseil. Les chiffres d''effectifs sont confirmés ; le montant fédéral ne l''est pas.'),
+
+  ('winter-transit-service-cuts', 1, 'en', 'PITCH — transit is cutting winter service on three bus routes. Worth establishing whether the cuts track ridership or driver availability, because the agency has given both reasons to different people.'),
+  ('winter-transit-service-cuts', 1, 'fr', 'PROPOSITION — le réseau réduit le service hivernal sur trois lignes de bus. Il faudrait établir si ces coupes suivent la fréquentation ou la disponibilité des conducteurs, l''agence ayant avancé les deux raisons selon les interlocuteurs.')
+) as v(article_slug, position, code, content)
+join article a on a.canonical_slug = v.article_slug
+join article_block b on b.article_id = a.id and b.position = v.position
+join local_text_link l on l.scope = 'article_block' and l.slug = 'text' and l.entity_id = b.id
+on conflict (link, locale) do nothing;
+
+-- ── The front ───────────────────────────────────────────────────────────────
+-- Hand-placed, which is the point: a newspaper front is an editorial judgement,
+-- not a reverse-chronological list. layout_variant is what the front page reads
+-- to decide how big a story plays.
+insert into front (slug, section_id, active)
+values ('home', null, true)
+on conflict (slug) do nothing;
+
+insert into front_slot (front_id, article_id, position, layout_variant)
+select f.id, a.id, v.position, v.layout_variant::front_layout_variant
+from (values
+  ('us-completes-iraq-troop-withdrawal',    1, 'lead'),
+  ('tech-leaders-sign-ai-safety-standards', 2, 'secondary'),
+  ('pilot-subdued-on-tel-aviv-flight',      3, 'secondary'),
+  ('iran-rial-slides-to-record-low',        4, 'river'),
+  ('spain-moves-to-ban-evictions',          5, 'river'),
+  ('council-advances-transit-levy',         6, 'river'),
+  ('museum-returns-benin-bronzes',          7, 'river'),
+  ('settlers-riot-in-west-bank-village',    8, 'river'),
+  ('airstrike-kills-hamas-commander',       9, 'river'),
+  ('housing-authority-vacancy-audit',      10, 'brief'),
+  ('central-bank-holds-benchmark-rate',    11, 'brief'),
+  ('nurses-ratify-three-year-contract',    12, 'brief'),
+  ('city-marathon-course-record',          13, 'brief')
+) as v(article_slug, position, layout_variant)
+join article a on a.canonical_slug = v.article_slug
+cross join (select id from front where slug = 'home') f
+where not exists (
+  select 1 from front_slot s where s.front_id = f.id and s.position = v.position
+);
+
+-- ── Live coverage ───────────────────────────────────────────────────────────
+insert into live_coverage (article_id, active, started_at)
+select a.id, true, now() - interval '4 hours'
+from article a
+where a.canonical_slug = 'us-completes-iraq-troop-withdrawal'
+  and not exists (select 1 from live_coverage c where c.article_id = a.id);
+
+insert into live_update (live_coverage_id, position, pinned, published_at)
+select c.id, v.position, v.pinned, now() - (v.minutes_ago || ' minutes')::interval
+from (values
+  (1, true, 215), (2, false, 180), (3, false, 142), (4, false, 96), (5, false, 38)
+) as v(position, pinned, minutes_ago)
+join live_coverage c on c.article_id = (select id from article where canonical_slug = 'us-completes-iraq-troop-withdrawal')
+where not exists (
+  select 1 from live_update u where u.live_coverage_id = c.id and u.position = v.position
+);
+
+insert into local_text_link (slug, scope, entity_id)
+select 'text', 'live_update', u.id from live_update u on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  (1, 'en', 'The Pentagon confirms the withdrawal is complete. We are working to establish the exact departure time and will update.'),
+  (1, 'fr', 'Le Pentagone confirme l''achèvement du retrait. Nous cherchons à établir l''heure exacte du départ et actualiserons.'),
+  (2, 'en', 'A defense official says the final contingent flew out of an air base in northern Iraq. The official spoke on condition of anonymity.'),
+  (2, 'fr', 'Un responsable de la défense indique que le dernier contingent a quitté une base aérienne du nord de l''Irak. Ce responsable s''exprimait sous couvert d''anonymat.'),
+  (3, 'en', 'Baghdad has not yet issued a statement. Iraq''s defence ministry says one is expected this evening.'),
+  (3, 'fr', 'Bagdad n''a pas encore publié de communiqué. Le ministère irakien de la Défense indique qu''il est attendu ce soir.'),
+  (4, 'en', 'Our correspondent reports that embassy security-cooperation staff remain in place and are not covered by the withdrawal agreement.'),
+  (4, 'fr', 'Notre correspondante rapporte que le personnel de coopération sécuritaire de l''ambassade reste en poste et n''est pas concerné par l''accord de retrait.'),
+  (5, 'en', 'Iraqi defence ministry statement received. It describes the security forces as prepared to operate independently and makes no request for continued air support.'),
+  (5, 'fr', 'Communiqué du ministère irakien de la Défense reçu. Il décrit des forces de sécurité prêtes à opérer de façon autonome et ne formule aucune demande de maintien de l''appui aérien.')
+) as v(position, code, content)
+join live_coverage c on c.article_id = (select id from article where canonical_slug = 'us-completes-iraq-troop-withdrawal')
+join live_update u on u.live_coverage_id = c.id and u.position = v.position
+join local_text_link l on l.scope = 'live_update' and l.slug = 'text' and l.entity_id = u.id
+on conflict (link, locale) do nothing;
+
+-- ── Newsletter and subscribers ──────────────────────────────────────────────
+insert into newsletter (slug, active)
+select v.slug, true from (values ('morning-briefing'), ('week-in-local')) as v(slug)
+on conflict (slug) do nothing;
+
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'newsletter', n.id
+from newsletter n cross join (values ('name'), ('description')) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('morning-briefing', 'name', 'en', 'Morning Briefing'),
+  ('morning-briefing', 'name', 'fr', 'Le point du matin'),
+  ('morning-briefing', 'description', 'en', 'The day''s essential reporting, in your inbox before seven.'),
+  ('morning-briefing', 'description', 'fr', 'L''essentiel de la journée dans votre boîte de réception avant sept heures.'),
+  ('week-in-local', 'name', 'en', 'The Week in Local'),
+  ('week-in-local', 'name', 'fr', 'La semaine en local'),
+  ('week-in-local', 'description', 'en', 'City hall, transit and housing — what changed this week and what it means.'),
+  ('week-in-local', 'description', 'fr', 'Hôtel de ville, transports et logement : ce qui a changé cette semaine et ce que cela signifie.')
+) as v(newsletter_slug, copy_slug, code, content)
+join newsletter n on n.slug = v.newsletter_slug
+join local_text_link l on l.scope = 'newsletter' and l.slug = v.copy_slug and l.entity_id = n.id
+on conflict (link, locale) do nothing;
+
+insert into subscriber (email_address, locale, confirmed_at)
+select v.email, v.locale,
+       case when v.confirmed then now() - interval '20 days' else null end
+from (values
+  ('a.nakamura@example.com', 'en', true),
+  ('b.dupont@example.com', 'fr', true),
+  ('c.oyelaran@example.com', 'en', true),
+  ('d.svensson@example.com', 'en', true),
+  ('e.lefebvre@example.com', 'fr', true),
+  ('f.pending@example.com', 'en', false)
+) as v(email, locale, confirmed)
+on conflict (email_address) do nothing;
+
+insert into newsletter_subscription (newsletter_id, subscriber_id, subscribed_at)
+select n.id, s.id, now() - interval '18 days'
+from newsletter n
+join subscriber s on s.confirmed_at is not null
+where n.slug = 'morning-briefing'
+  and not exists (
+    select 1 from newsletter_subscription x
+    where x.newsletter_id = n.id and x.subscriber_id = s.id
+  );
+
+-- ── Reader comments ─────────────────────────────────────────────────────────
+-- The one deliberate deviation from the no-copy-columns rule: comment.body is
+-- runtime reader data, not editorial copy, so it never enters the dictionary.
+insert into comment (article_id, author_name, author_email, body, status, created_at)
+select a.id, v.author_name, v.author_email, v.body, v.status::comment_status,
+       now() - (v.hours_ago || ' hours')::interval
+from (values
+  ('us-completes-iraq-troop-withdrawal', 'R. Halloran', 'r.halloran@example.com',
+   'The piece says advisory staff remain at the embassy. How many, and under whose command?', 'approved', 2),
+  ('us-completes-iraq-troop-withdrawal', 'M. Osei', 'm.osei@example.com',
+   'Worth noting the 2011 withdrawal was also described as complete at the time.', 'approved', 1),
+  ('tech-leaders-sign-ai-safety-standards', 'J. Weaver', 'j.weaver@example.com',
+   'Voluntary standards with no penalty are a press release, not a policy.', 'approved', 4),
+  ('tech-leaders-sign-ai-safety-standards', 'Anonymous', 'spam@example.com',
+   'Unmoderated submission awaiting review.', 'pending', 1),
+  ('council-advances-transit-levy', 'T. Abiodun', 't.abiodun@example.com',
+   'Which six routes? The article names the count but not the lines.', 'approved', 6)
+) as v(article_slug, author_name, author_email, body, status, hours_ago)
+join article a on a.canonical_slug = v.article_slug
+where not exists (
+  select 1 from comment c where c.article_id = a.id and c.author_email = v.author_email
+);
+
+-- ── Preview token ───────────────────────────────────────────────────────────
+-- An unpublished investigation, shareable by link. Fixed token so the POC has a
+-- stable URL to exercise; in production these are generated per share.
+insert into article_preview_token (article_id, token, expires_at)
+select a.id, 'poc-preview-port-authority', now() + interval '14 days'
+from article a where a.canonical_slug = 'port-authority-overtime-records'
+on conflict (token) do nothing;
+
+-- ── Desk assignments ────────────────────────────────────────────────────────
+-- article_assignment.user_account_id is NOT NULL, and principals are provisioned
+-- just-in-time at first sign-in — a freshly reset database has none. So this joins
+-- user_account rather than sub-selecting min(id): with no principal yet the join
+-- yields nothing and the seed inserts no assignments, instead of failing the whole
+-- seed on a not-null violation. Re-run the seed after signing in once to get them.
+insert into article_assignment (article_id, user_account_id, role, due_at)
+select a.id, u.id, v.role::article_assignment_role,
+       now() + (v.due_days || ' days')::interval
+from (values
+  ('port-authority-overtime-records', 'editor', 3),
+  ('school-board-budget-shortfall', 'author', 5),
+  ('winter-transit-service-cuts', 'author', 9)
+) as v(article_slug, role, due_days)
+join article a on a.canonical_slug = v.article_slug
+join user_account u on u.id = (select min(id) from public.user_account)
+where not exists (
+  select 1 from article_assignment x where x.article_id = a.id and x.role = v.role::article_assignment_role
+);
+
+-- ── Publish checklist state ─────────────────────────────────────────────────
+-- Everything live has cleared its gate. The investigation has cleared only its first
+-- two items — ordinals run 10, 20, 30…, so the threshold is 20, not 2 — which is what
+-- makes the admin screen's publish-blocked path visible on a required item.
+insert into article_checklist_state (article_id, publish_checklist_item_id, satisfied, satisfied_at)
+select a.id, i.id, true, now() - interval '2 hours'
+from article a
+join article_status s on s.id = a.article_status_id
+cross join publish_checklist_item i
+where s.slug = 'published'
+  and not exists (
+    select 1 from article_checklist_state x
+    where x.article_id = a.id and x.publish_checklist_item_id = i.id
+  );
+
+insert into article_checklist_state (article_id, publish_checklist_item_id, satisfied, satisfied_at)
+select a.id, i.id, i.ordinal <= 20, case when i.ordinal <= 20 then now() - interval '1 day' else null end
+from article a
+cross join publish_checklist_item i
+where a.canonical_slug = 'port-authority-overtime-records'
+  and not exists (
+    select 1 from article_checklist_state x
+    where x.article_id = a.id and x.publish_checklist_item_id = i.id
+  );
+
+-- ── Copy for the module seed's own rows ─────────────────────────────────────
+-- The link inserts above cross join every author_profile and newsletter, which
+-- includes the two rows the content module's own seed creates (sample-author and
+-- daily-briefing). Without copy of their own those links would resolve to a
+-- fallback sentinel, so they get filled here rather than narrowing the join —
+-- a newsroom seed should leave no link half-populated.
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('author_profile', 'bio', 'sample-author', 'en', 'A placeholder profile created by the content module''s own seed data.'),
+  ('author_profile', 'bio', 'sample-author', 'fr', 'Un profil de démonstration créé par les données d''amorçage du module de contenu.')
+) as v(scope, copy_slug, entity_slug, code, content)
+join author_profile a on a.slug = v.entity_slug
+join local_text_link l on l.scope = v.scope and l.slug = v.copy_slug and l.entity_id = a.id
+on conflict (link, locale) do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('daily-briefing', 'en', 'The module''s default newsletter, kept so its seed stays self-consistent.'),
+  ('daily-briefing', 'fr', 'La lettre d''information par défaut du module, conservée pour la cohérence de son amorçage.')
+) as v(entity_slug, code, content)
+join newsletter n on n.slug = v.entity_slug
+join local_text_link l on l.scope = 'newsletter' and l.slug = 'description' and l.entity_id = n.id
+on conflict (link, locale) do nothing;
+
+-- ── Front page UI copy ──────────────────────────────────────────────────────
+-- Application-level copy for the front: scope = the module name, entity_id null.
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'content', null
+from (values ('content.front.live_now'), ('content.front.more_news'),
+             ('content.front.briefs'), ('content.front.sections'),
+             ('content.front.latest'), ('content.front.read_more')) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('content.front.live_now', 'en', 'Live now'),        ('content.front.live_now', 'fr', 'En direct'),
+  ('content.front.more_news', 'en', 'More news'),      ('content.front.more_news', 'fr', 'Autres actualités'),
+  ('content.front.briefs', 'en', 'In brief'),          ('content.front.briefs', 'fr', 'En bref'),
+  ('content.front.sections', 'en', 'Sections'),        ('content.front.sections', 'fr', 'Rubriques'),
+  ('content.front.latest', 'en', 'Latest'),            ('content.front.latest', 'fr', 'Dernières nouvelles'),
+  ('content.front.read_more', 'en', 'Read more'),      ('content.front.read_more', 'fr', 'Lire la suite')
+) as v(slug, code, content)
+join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
+on conflict (link, locale) do nothing;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Public route additions
+--
+-- Copy for the author, topic and live-coverage surfaces. Author bylines link to
+-- /author/<slug> from BylineList's default linkPrefix and from the NewsArticle
+-- JSON-LD's author[].url, so those pages have to exist or the structured data
+-- advertises 404s. LiveCoverageView resolves a title and description that nothing
+-- seeded, and the coverage thread was already here with five updates.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- ── Author expertise ───────────────────────────────────────────────────────
+-- AuthorProfileView resolves name, bio and expertise. The POC's own author page
+-- renders name + bio + expertise directly rather than using that component (it
+-- passes a `mediaAssets` prop ArticleCard does not declare — see DEFERRED.md), but
+-- the copy is seeded under the same slugs so either renderer works.
+insert into local_text_link (slug, scope, entity_id)
+select 'expertise', 'author_profile', a.id from author_profile a
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('elena-marchetti', 'en', 'Conflict and diplomacy'),
+  ('elena-marchetti', 'fr', 'Conflits et diplomatie'),
+  ('david-okonkwo', 'en', 'Federal government, technology regulation'),
+  ('david-okonkwo', 'fr', 'Gouvernement fédéral, réglementation des technologies'),
+  ('priya-raman', 'en', 'Central banks, currencies, energy economics'),
+  ('priya-raman', 'fr', 'Banques centrales, devises, économie de l''énergie'),
+  ('tomas-lindqvist', 'en', 'Public health systems, medical research'),
+  ('tomas-lindqvist', 'fr', 'Systèmes de santé publique, recherche médicale'),
+  ('maya-brennan', 'en', 'City hall, transit, housing'),
+  ('maya-brennan', 'fr', 'Hôtel de ville, transports, logement'),
+  ('jonah-feldman', 'en', 'Museums, music, visual arts'),
+  ('jonah-feldman', 'fr', 'Musées, musique, arts visuels'),
+  ('sample-author', 'en', 'Placeholder'),
+  ('sample-author', 'fr', 'Exemple')
+) as v(author_slug, code, content)
+join author_profile a on a.slug = v.author_slug
+join local_text_link l
+  on l.scope = 'author_profile' and l.slug = 'expertise' and l.entity_id = a.id
+on conflict (link, locale) do nothing;
+
+-- ── Live coverage title and description ────────────────────────────────────
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'live_coverage', c.id
+from live_coverage c cross join (values ('title'), ('description')) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('title', 'en', 'Live: the last U.S. troops leave Iraq'),
+  ('title', 'fr', 'En direct : les derniers soldats américains quittent l''Irak'),
+  ('description', 'en', 'Updates from Baghdad, the Pentagon and our correspondent as the withdrawal completes.'),
+  ('description', 'fr', 'Les informations de Bagdad, du Pentagone et de notre correspondante à mesure que le retrait s''achève.')
+) as v(copy_slug, code, content)
+join live_coverage c
+  on c.article_id = (select id from article where canonical_slug = 'us-completes-iraq-troop-withdrawal')
+join local_text_link l
+  on l.scope = 'live_coverage' and l.slug = v.copy_slug and l.entity_id = c.id
+on conflict (link, locale) do nothing;
+
+-- ── UI copy for the new surfaces ───────────────────────────────────────────
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'content', null
+from (values
+  ('content.author.articles_by'), ('content.author.expertise'), ('content.author.empty'),
+  ('content.topic.heading'), ('content.topic.empty'), ('content.topic.all_topics'),
+  ('content.live.heading'), ('content.live.updating'), ('content.live.ended')
+) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('content.author.articles_by', 'en', 'Articles by this reporter'),
+  ('content.author.articles_by', 'fr', 'Articles de ce journaliste'),
+  ('content.author.expertise', 'en', 'Covers'),
+  ('content.author.expertise', 'fr', 'Couvre'),
+  ('content.author.empty', 'en', 'No published articles yet.'),
+  ('content.author.empty', 'fr', 'Aucun article publié pour le moment.'),
+  ('content.topic.heading', 'en', 'Topic'),
+  ('content.topic.heading', 'fr', 'Sujet'),
+  ('content.topic.empty', 'en', 'Nothing filed under this topic yet.'),
+  ('content.topic.empty', 'fr', 'Rien de classé sous ce sujet pour le moment.'),
+  ('content.topic.all_topics', 'en', 'All topics'),
+  ('content.topic.all_topics', 'fr', 'Tous les sujets'),
+  ('content.live.heading', 'en', 'Live coverage'),
+  ('content.live.heading', 'fr', 'Couverture en direct'),
+  ('content.live.updating', 'en', 'Updating'),
+  ('content.live.updating', 'fr', 'Mise à jour en cours'),
+  ('content.live.ended', 'en', 'Coverage ended'),
+  ('content.live.ended', 'fr', 'Couverture terminée')
+) as v(slug, code, content)
+join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
+on conflict (link, locale) do nothing;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Newsroom admin copy
+--
+-- Labels for the article editor, the newsroom board, comment moderation and user
+-- management. Application-level copy, so scope = the module name and entity_id null.
+-- ─────────────────────────────────────────────────────────────────────────────
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'content', null
+from (values
+  ('content.admin.copy'), ('content.admin.headline_label'), ('content.admin.dek_label'),
+  ('content.admin.locale_label'), ('content.admin.add_block'), ('content.admin.heading_level'),
+  ('content.admin.move_up'), ('content.admin.move_down'), ('content.admin.delete'),
+  ('content.admin.topics'), ('content.admin.tags'), ('content.admin.publishing'),
+  ('content.admin.slug_label'), ('content.admin.embargo_label'), ('content.admin.embargo_hint'),
+  ('content.admin.allow_comment'), ('content.admin.byline_hint'), ('content.admin.view_public'),
+  ('content.admin.saved'), ('content.admin.block_new'), ('content.admin.filing_hint'),
+  ('content.board.title'), ('content.board.empty'), ('content.board.approve'),
+  ('content.board.send_back'), ('content.board.assignee'), ('content.board.due'),
+  ('content.board.checklist_progress'), ('content.board.overdue'), ('content.board.unassigned'),
+  ('content.comment.title'), ('content.comment.pending'), ('content.comment.approve'),
+  ('content.comment.reject'), ('content.comment.empty'), ('content.comment.on_article'),
+  ('content.user.title'), ('content.user.email'), ('content.user.admin'),
+  ('content.user.author_profile'), ('content.user.none'), ('content.user.save'),
+  ('content.user.no_invite_hint'), ('content.user.self')
+) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('content.admin.copy', 'en', 'Headline and dek'),
+  ('content.admin.copy', 'fr', 'Titre et chapeau'),
+  ('content.admin.headline_label', 'en', 'Headline'),
+  ('content.admin.headline_label', 'fr', 'Titre'),
+  ('content.admin.dek_label', 'en', 'Dek'),
+  ('content.admin.dek_label', 'fr', 'Chapeau'),
+  ('content.admin.locale_label', 'en', 'Writing in'),
+  ('content.admin.locale_label', 'fr', 'Rédaction en'),
+  ('content.admin.add_block', 'en', 'Add a block'),
+  ('content.admin.add_block', 'fr', 'Ajouter un bloc'),
+  ('content.admin.heading_level', 'en', 'Heading level'),
+  ('content.admin.heading_level', 'fr', 'Niveau de titre'),
+  ('content.admin.move_up', 'en', 'Move up'),
+  ('content.admin.move_up', 'fr', 'Monter'),
+  ('content.admin.move_down', 'en', 'Move down'),
+  ('content.admin.move_down', 'fr', 'Descendre'),
+  ('content.admin.delete', 'en', 'Delete'),
+  ('content.admin.delete', 'fr', 'Supprimer'),
+  ('content.admin.topics', 'en', 'Topics'),
+  ('content.admin.topics', 'fr', 'Sujets'),
+  ('content.admin.tags', 'en', 'Tags'),
+  ('content.admin.tags', 'fr', 'Étiquettes'),
+  ('content.admin.publishing', 'en', 'Publishing'),
+  ('content.admin.publishing', 'fr', 'Publication'),
+  ('content.admin.slug_label', 'en', 'URL slug'),
+  ('content.admin.slug_label', 'fr', 'Identifiant d''URL'),
+  ('content.admin.embargo_label', 'en', 'Embargoed until'),
+  ('content.admin.embargo_label', 'fr', 'Sous embargo jusqu''au'),
+  ('content.admin.embargo_hint', 'en', 'UTC. Leave empty for no embargo.'),
+  ('content.admin.embargo_hint', 'fr', 'UTC. Laisser vide s''il n''y a pas d''embargo.'),
+  ('content.admin.allow_comment', 'en', 'Accept reader comments'),
+  ('content.admin.allow_comment', 'fr', 'Accepter les commentaires des lecteurs'),
+  ('content.admin.byline_hint', 'en', 'Order decides who leads the byline.'),
+  ('content.admin.byline_hint', 'fr', 'L''ordre détermine qui signe en premier.'),
+  ('content.admin.view_public', 'en', 'View public page'),
+  ('content.admin.view_public', 'fr', 'Voir la page publique'),
+  ('content.admin.saved', 'en', 'Saved.'),
+  ('content.admin.saved', 'fr', 'Enregistré.'),
+  ('content.admin.block_new', 'en', 'New block text'),
+  ('content.admin.block_new', 'fr', 'Texte du nouveau bloc'),
+  ('content.admin.filing_hint', 'en', 'Sections drive navigation; topics and tags drive discovery.'),
+  ('content.admin.filing_hint', 'fr', 'Les rubriques structurent la navigation ; sujets et étiquettes la découverte.'),
+
+  ('content.board.title', 'en', 'Newsroom board'),
+  ('content.board.title', 'fr', 'Tableau de rédaction'),
+  ('content.board.empty', 'en', 'Nothing at this stage.'),
+  ('content.board.empty', 'fr', 'Rien à ce stade.'),
+  ('content.board.approve', 'en', 'Advance'),
+  ('content.board.approve', 'fr', 'Faire avancer'),
+  ('content.board.send_back', 'en', 'Send back'),
+  ('content.board.send_back', 'fr', 'Renvoyer'),
+  ('content.board.assignee', 'en', 'Assigned'),
+  ('content.board.assignee', 'fr', 'Attribué'),
+  ('content.board.due', 'en', 'Due'),
+  ('content.board.due', 'fr', 'Échéance'),
+  ('content.board.checklist_progress', 'en', 'Checklist'),
+  ('content.board.checklist_progress', 'fr', 'Liste de contrôle'),
+  ('content.board.overdue', 'en', 'Overdue'),
+  ('content.board.overdue', 'fr', 'En retard'),
+  ('content.board.unassigned', 'en', 'Unassigned'),
+  ('content.board.unassigned', 'fr', 'Non attribué'),
+
+  ('content.comment.title', 'en', 'Comment moderation'),
+  ('content.comment.title', 'fr', 'Modération des commentaires'),
+  ('content.comment.pending', 'en', 'Awaiting review'),
+  ('content.comment.pending', 'fr', 'En attente de examen'),
+  ('content.comment.approve', 'en', 'Approve'),
+  ('content.comment.approve', 'fr', 'Approuver'),
+  ('content.comment.reject', 'en', 'Reject'),
+  ('content.comment.reject', 'fr', 'Rejeter'),
+  ('content.comment.empty', 'en', 'No comments awaiting review.'),
+  ('content.comment.empty', 'fr', 'Aucun commentaire en attente.'),
+  ('content.comment.on_article', 'en', 'On'),
+  ('content.comment.on_article', 'fr', 'Sur'),
+
+  ('content.user.title', 'en', 'People'),
+  ('content.user.title', 'fr', 'Personnes'),
+  ('content.user.email', 'en', 'Email'),
+  ('content.user.email', 'fr', 'Courriel'),
+  ('content.user.admin', 'en', 'Administrator'),
+  ('content.user.admin', 'fr', 'Administrateur'),
+  ('content.user.author_profile', 'en', 'Author profile'),
+  ('content.user.author_profile', 'fr', 'Profil d''auteur'),
+  ('content.user.none', 'en', 'None'),
+  ('content.user.none', 'fr', 'Aucun'),
+  ('content.user.save', 'en', 'Save'),
+  ('content.user.save', 'fr', 'Enregistrer'),
+  ('content.user.no_invite_hint', 'en', 'People appear here after they sign in for the first time. There is no invitation flow.'),
+  ('content.user.no_invite_hint', 'fr', 'Les personnes apparaissent ici après leur première connexion. Il n''existe pas de procédure d''invitation.'),
+  ('content.user.self', 'en', 'You'),
+  ('content.user.self', 'fr', 'Vous')
+) as v(slug, code, content)
+join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
+on conflict (link, locale) do nothing;
+
+-- ── Admin navigation ───────────────────────────────────────────────────────
+-- The content admin was never in the admin nav: the article screens shipped as a
+-- bundle but nothing added a link, so they were reachable only by typing the URL.
+--
+-- These follow the base template's convention exactly, which is load-bearing in two
+-- ways: the slug is `admin.nav.<thing>`, and the link's scope is NULL. The admin
+-- layout resolves a nav label with `dictionary.localText(slug)` and no scope argument,
+-- so the copy has to be global — scoped copy would never be found and every label
+-- would render as a `[missing: …]` sentinel.
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, null, null
+from (values
+  ('admin.nav.board'), ('admin.nav.article'), ('admin.nav.comment'), ('admin.nav.people')
+) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('admin.nav.board', 'en', 'Board'),        ('admin.nav.board', 'fr', 'Tableau'),
+  ('admin.nav.article', 'en', 'Articles'),   ('admin.nav.article', 'fr', 'Articles'),
+  ('admin.nav.comment', 'en', 'Comments'),   ('admin.nav.comment', 'fr', 'Commentaires'),
+  ('admin.nav.people', 'en', 'People'),      ('admin.nav.people', 'fr', 'Personnes')
+) as v(slug, code, content)
+join local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
+on conflict (link, locale) do nothing;
+
+insert into navigation_item (local_text_link_id, href, scope, sort_order, active)
+select l.id, v.href, 'admin', v.sort_order, true
+from (values
+  ('admin.nav.board',   '/admin/content/board',   15),
+  ('admin.nav.article', '/admin/content/article', 16),
+  ('admin.nav.comment', '/admin/content/comment', 17),
+  ('admin.nav.people',  '/admin/user',            18)
+) as v(slug, href, sort_order)
+join local_text_link l on l.slug = v.slug and l.scope is null and l.entity_id is null
+where not exists (
+  select 1 from navigation_item n where n.href = v.href and n.scope = 'admin'
+);

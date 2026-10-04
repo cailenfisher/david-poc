@@ -1,0 +1,55 @@
+# Namespaces this project's local Docker containers (supabase_db_<project_id>, etc.).
+# create-sveltebuilder rewrites this to your project name at scaffold time; without it
+# the CLI falls back to the directory name, so the stack follows a folder rename.
+project_id = "david-poc"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+# Mail testing — catches every local auth email; web UI on this port.
+# Named [inbucket] in older CLI versions; that spelling now warns as deprecated.
+[local_smtp]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+# Logflare/Vector — Studio's centralized log viewer. Two extra always-on containers
+# that add real memory/CPU overhead for a feature most local dev doesn't need.
+# Flip to true if you actually want Studio's Logs pane locally.
+[analytics]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+# The scaffold's sign-in page (src/routes/sign-in/) calls signInWithOAuth({ provider: 'google' })
+# exclusively — this provider must be enabled, here and in your Google Cloud OAuth client, before
+# local sign-in works. See "Local development" in README.md for the full setup.
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"

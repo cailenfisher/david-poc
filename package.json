@@ -1,0 +1,40 @@
+{
+  "name": "david-poc",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "@sveltebuilder/content": "latest",
+    "@sveltebuilder/coreui": "latest",
+    "@sveltebuilder/local-text-schema": "latest",
+    "diglossia": "latest"
+  },
+  "devDependencies": {
+    "@sveltebuilder/cli": "latest",
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/node": "^22.20.4",
+    "drizzle-kit": "^0.29.0",
+    "drizzle-orm": "^0.38.0",
+    "supabase": "^2.0.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.1"
+  }
+}

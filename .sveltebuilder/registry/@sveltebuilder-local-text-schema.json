@@ -1,0 +1,5 @@
+{
+  "package": "@sveltebuilder/local-text-schema",
+  "schema": "@sveltebuilder/local-text-schema/schema",
+  "after": []
+}

@@ -1,0 +1,27 @@
+/* =============================================================================
+   app.css — Application stylesheet
+
+   Layer order is declared first so it holds regardless of import sequencing.
+   All @imports follow. Unlayered rules after the imports always win.
+
+   To theme: override the public design tokens in the :root block below.
+   Token reference: @sveltebuilder/coreui/styles/tokens.css
+   ============================================================================= */
+
+@layer reset, tokens, base, chrome, components, utilities;
+
+@import '@sveltebuilder/coreui/styles/tokens.css';
+@import '@sveltebuilder/coreui/styles/base.css' layer(base);
+@import './chrome.css' layer(chrome);
+@import '@sveltebuilder/coreui/styles/components.css' layer(components);
+
+/* ---- Token overrides ---- */
+:root {
+  --brand:  #45b1e8;   /* Picton Blue */
+  --chrome: #e2e8f0;
+
+  --danger:  #ef4444;
+  --warning: #f59e0b;
+  --success: #22c55e;
+  --info:    #8b5cf6;
+}

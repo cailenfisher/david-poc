@@ -1,0 +1,5 @@
+{
+  "package": "@sveltebuilder/content",
+  "schema": "@sveltebuilder/content/schema",
+  "after": ["@sveltebuilder/local-text-schema", "@sveltebuilder/superprototype"]
+}

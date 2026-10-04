@@ -1,0 +1,5 @@
+{
+  "package": "@sveltebuilder/superprototype",
+  "schema": "./src/lib/server/schema.ts",
+  "after": ["@sveltebuilder/local-text-schema"]
+}
