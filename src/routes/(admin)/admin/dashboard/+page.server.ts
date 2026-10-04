@@ -1,29 +1,72 @@
 import type { PageServerLoad } from './$types'
+import {
+  loadActiveArticle,
+  loadArticleStatusCount,
+  loadCommentQueue,
+  loadTrendingArticle,
+} from '$lib/server/dashboard'
 import { loadPageViewReport } from '$lib/server/page-view'
-import { loadScopedCopy } from '$lib/server/scoped-copy'
+import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy'
+
+const REPORT_DAYS = 7
+const LIST_LIMIT = 5
+
+/**
+ * Each widget is an overview of a screen that exists in its own right, so none is
+ * the dashboard's reason to exist: a widget whose query fails is left out and the
+ * rest still render.
+ */
+function optional<T>(name: string, load: Promise<T>): Promise<T | null> {
+  return load.catch((failure) => {
+    console.error(`[dashboard] ${name} failed:`, failure)
+    return null
+  })
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
-  // The visitor widget is an extra, not the dashboard's reason to exist: if its
-  // queries fail, the dashboard still renders, just without it.
-  const [pageView, pageViewCopy] = await Promise.all([
-    loadPageViewReport(locals.supabase, 7, 5).catch((failure) => {
-      console.error('[dashboard] page view report failed:', failure)
-      return null
-    }),
-    loadScopedCopy(locals.supabase, 'page_view', locals.locale.code, locals.defaultLocale.code),
+  const { supabase } = locals
+
+  const [pageView, articleStatusCount, activeArticle, trendingArticle, commentQueue] =
+    await Promise.all([
+      optional('page view report', loadPageViewReport(supabase, REPORT_DAYS, LIST_LIMIT)),
+      optional('article status count', loadArticleStatusCount(supabase)),
+      optional('active articles', loadActiveArticle(supabase, LIST_LIMIT)),
+      optional('trending articles', loadTrendingArticle(supabase, REPORT_DAYS, LIST_LIMIT)),
+      optional('comment queue', loadCommentQueue(supabase)),
+    ])
+
+  // Copy for exactly the entities on screen: every status, plus the headlines of the
+  // stories the two lists show.
+  const articleIds = [...(activeArticle ?? []), ...(trendingArticle ?? [])].map(
+    (article) => article.id
+  )
+  const statusIds = (articleStatusCount ?? []).map((entry) => entry.status.id)
+
+  const [uiCopy, entityCopy] = await Promise.all([
+    loadScopedCopy(
+      supabase,
+      ['dashboard', 'page_view'],
+      locals.locale.code,
+      locals.defaultLocale.code
+    ),
+    loadEntityCopy(
+      supabase,
+      [
+        { scope: 'article', ids: articleIds },
+        { scope: 'article_status', ids: statusIds },
+      ],
+      locals.locale.code,
+      locals.defaultLocale.code
+    ),
   ])
 
-  // Replace these stubs with real queries using locals.supabase
-  // e.g. const { count } = await locals.supabase.from('user_account').select('id', { count: 'exact', head: true })
   return {
-    stats: {
-      totalUsers: null as number | null,
-      activeSessions: null as number | null,
-      published: null as number | null,
-      pendingReview: null as number | null,
-    },
     pageView,
-    pageViewCopy,
+    articleStatusCount,
+    activeArticle,
+    trendingArticle,
+    commentQueue,
+    copy: [...uiCopy, ...entityCopy],
     localeCode: locals.locale.code,
   }
 }
