@@ -51,7 +51,10 @@ const localeHook: Handle = async ({ event, resolve }) => {
   event.locals.locale = available.find((l) => l.code === resolvedCode) ?? defaultLocale;
   event.locals.defaultLocale = defaultLocale;
 
-  return resolve(event);
+  // app.html carries %sveltekit.lang% on <html>, which SvelteKit does not fill in itself.
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace('%sveltekit.lang%', event.locals.locale.code),
+  });
 };
 
 export const handle = sequence(providerHandle, populateLocals, localeHook);

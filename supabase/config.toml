@@ -28,6 +28,15 @@ port = 54324
 [storage]
 enabled = true
 
+# Mirrors supabase/supplemental/09-media-storage.sql, which is what creates the bucket on a
+# hosted project; config.toml only affects the local stack. Keep the two in step.
+# objects_path seeds the demo images: `supabase seed buckets --local`.
+[storage.buckets.media]
+public = true
+file_size_limit = "4MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "image/avif"]
+objects_path = "./seeds/media"
+
 # Logflare/Vector — Studio's centralized log viewer. Two extra always-on containers
 # that add real memory/CPU overhead for a feature most local dev doesn't need.
 # Flip to true if you actually want Studio's Logs pane locally.

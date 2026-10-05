@@ -1,7 +1,8 @@
 <script lang="ts">
   import { createDictionary } from 'diglossia';
   import { Button, Field, InlineNotification, Input, Textarea } from '@sveltebuilder/coreui';
-  import { ArticleView, LiveCoverageView } from '@sveltebuilder/content';
+  import { LiveCoverageView } from '@sveltebuilder/content';
+  import ArticleViewUniqueHero from '$lib/components/ArticleViewUniqueHero.svelte';
   import { buildArticleMetaTags, buildNewsArticleJsonLd } from '@sveltebuilder/content/publishing';
   import type { ScreenFormResult } from '@sveltebuilder/content/views';
   import type { ArticlePageWithCoverage } from './coverage-view';
@@ -36,11 +37,33 @@
       : null
   );
 
-  const metaTags = $derived(
-    data.publisherProfile
-      ? buildArticleMetaTags(data.article, data.publisherProfile, scoped, structuredDataOptions)
-      : {}
-  );
+  // buildArticleMetaTags reads the lead image's alt text off the asset, which carries no copy,
+  // so it emits og:image:alt and twitter:image:alt with no content. Resolve it from the
+  // dictionary here instead, for the same first image block the builder picks.
+  const leadImageAlt = $derived.by(() => {
+    const block = data.article.blocks.find(
+      (candidate) =>
+        candidate.blockType === 'image' &&
+        candidate.mediaAssetId !== null &&
+        mediaAssets.get(candidate.mediaAssetId)?.storageKey
+    );
+    return block?.mediaAssetId == null
+      ? null
+      : scoped.localText('alt_text', 'media_asset', block.mediaAssetId);
+  });
+
+  const metaTags = $derived.by(() => {
+    if (!data.publisherProfile) return {};
+    const tags = buildArticleMetaTags(
+      data.article,
+      data.publisherProfile,
+      scoped,
+      structuredDataOptions
+    );
+    return 'og:image' in tags && leadImageAlt
+      ? { ...tags, 'og:image:alt': leadImageAlt, 'twitter:image:alt': leadImageAlt }
+      : tags;
+  });
 
   const commentAccepted = $derived(form?.success === true);
 </script>
@@ -66,7 +89,7 @@
 <main class="article-page">
   <!-- Camp 2 component: it resolves the headline, dek and every block's text from the
        dictionary by entity id, so it takes this screen's instance rather than context. -->
-  <ArticleView
+  <ArticleViewUniqueHero
     article={data.article}
     {mediaAssets}
     storageBaseUrl={data.storageBaseUrl}
@@ -135,7 +158,7 @@
         </section>
       {/if}
     {/snippet}
-  </ArticleView>
+  </ArticleViewUniqueHero>
 </main>
 
 <style>

@@ -23,7 +23,8 @@
     "@sveltebuilder/content": "latest",
     "@sveltebuilder/coreui": "latest",
     "@sveltebuilder/local-text-schema": "latest",
-    "diglossia": "latest"
+    "diglossia": "latest",
+    "image-size": "^2.0.4"
   },
   "devDependencies": {
     "@sveltebuilder/cli": "latest",
