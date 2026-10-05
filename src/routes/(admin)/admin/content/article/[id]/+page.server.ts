@@ -11,6 +11,7 @@ import {
   parseRightsFields,
   readImageDimensions,
 } from '$lib/server/media-upload';
+import { validateImageRights } from '$lib/server/validate-image-rights';
 import type { MediaAssetWithRights } from '$lib/types/media-asset';
 import type { ChecklistEntry } from '@sveltebuilder/content/views';
 import type { ArticleEditorView } from './editor-view';
@@ -265,17 +266,39 @@ export const actions: Actions = {
     if (!statusSlug) return fail(422, { error: 'Choose a status.' });
 
     if (statusSlug === 'published') {
-      const { article, publisher, copy } = await loadArticleForValidation(locals, id);
+      const { article, publisher, copy, mediaAssets } = await loadArticleForValidation(locals, id);
       if (article === null) throw error(404, 'Article not found.');
 
+      const dictionary = createDictionary(copy);
+
+      // The module checks the editorial basics, including alt text; the app checks that every
+      // image may be used. Both run, and their problems are reported together, so an editor
+      // fixes the lot in one pass instead of meeting them one failed publish at a time.
+      let moduleMessage: string | null = null;
       try {
-        validateArticleForPublish(article, publisher, createDictionary(copy));
+        validateArticleForPublish(article, publisher, dictionary);
       } catch (validationError) {
+        moduleMessage =
+          validationError instanceof Error
+            ? validationError.message
+            : 'This article is not ready to publish.';
+      }
+
+      const imageProblems = validateImageRights(
+        article.blocks,
+        mediaAssets,
+        dictionary,
+        locals.locale.code
+      );
+
+      if (moduleMessage !== null || imageProblems.length > 0) {
         return fail(422, {
           error:
-            validationError instanceof Error
-              ? validationError.message
-              : 'This article is not ready to publish.',
+            moduleMessage === null
+              ? imageProblems.join(' ')
+              : [moduleMessage, ...imageProblems.map((problem) => `[imageRights] ${problem}`)].join(
+                  '\n'
+                ),
         });
       }
     }
@@ -757,14 +780,17 @@ export const actions: Actions = {
  */
 async function loadMediaAssets(
   locals: App.Locals,
-  articleAssetIds: number[]
+  articleAssetIds: number[],
+  recentCount: number = PICKER_ASSET_COUNT
 ): Promise<MediaAssetWithRights[]> {
   const [recentResult, usedResult] = await Promise.all([
-    locals.supabase
-      .from('media_asset')
-      .select(MEDIA_ASSET_COLUMNS)
-      .order('created_at', { ascending: false })
-      .limit(PICKER_ASSET_COUNT),
+    recentCount > 0
+      ? locals.supabase
+          .from('media_asset')
+          .select(MEDIA_ASSET_COLUMNS)
+          .order('created_at', { ascending: false })
+          .limit(recentCount)
+      : Promise.resolve({ data: [], error: null }),
     articleAssetIds.length > 0
       ? locals.supabase.from('media_asset').select(MEDIA_ASSET_COLUMNS).in('id', articleAssetIds)
       : Promise.resolve({ data: [], error: null }),
@@ -828,7 +854,7 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
   ]);
 
   if (articleResult.error || !articleResult.data) {
-    return { article: null, publisher: null, copy: [] };
+    return { article: null, publisher: null, copy: [], mediaAssets: [] };
   }
 
   const row = articleResult.data;
@@ -901,6 +927,8 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
     .map((block) => block.mediaAssetId)
     .filter((assetId): assetId is number => assetId !== null);
 
+  const mediaAssets = await loadMediaAssets(locals, mediaAssetIds, 0);
+
   const copy = await loadEntityCopy(
     locals.supabase,
     [
@@ -924,5 +952,6 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
         }
       : null,
     copy,
+    mediaAssets,
   };
 }

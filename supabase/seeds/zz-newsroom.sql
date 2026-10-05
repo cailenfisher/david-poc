@@ -1201,6 +1201,21 @@ from (values
 join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
 on conflict (link, locale) do nothing;
 
+-- The images_credited checklist item used to read "Images credited", a box ticked on faith.
+-- The publish gate now checks the rights data itself (validate-image-rights.ts), so the item
+-- means a human has looked at the credits as they appear. content.sql seeds the original
+-- label with do nothing, so this overrides it with do update and never edits that file.
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('en', 'Image credits checked on the preview'),
+  ('fr', 'Crédits photo vérifiés sur l''aperçu')
+) as v(code, content)
+join publish_checklist_item i on i.slug = 'images_credited'
+join local_text_link l
+  on l.slug = 'label' and l.scope = 'publish_checklist_item' and l.entity_id = i.id
+on conflict (link, locale) do update set content = excluded.content;
+
 -- ── Admin navigation ───────────────────────────────────────────────────────
 -- The content admin was never in the admin nav: the article screens shipped as a
 -- bundle but nothing added a link, so they were reachable only by typing the URL.

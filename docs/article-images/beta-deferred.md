@@ -31,7 +31,7 @@ These need a change in the module, not in this app. Don't patch `node_modules`.
 
 ## Editorial workflow
 
-- **Auto-satisfy `images_credited`** when an article has no image blocks, so editors aren't asked to tick a box that doesn't apply.
+- **Auto-satisfy `images_credited`** when an article has no image blocks, so editors aren't asked to tick a box that doesn't apply. Step 5 relabels the item "Image credits checked on the preview" but leaves it a manual, required tick.
 - **Focal point and cropping** in the editor, stored in the block's `content` jsonb.
 - **Drag-and-drop and paste-to-upload** in the editor.
 - **Arabic and other locales' media copy.** Seeds cover en and fr only.
