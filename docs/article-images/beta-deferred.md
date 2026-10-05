@@ -39,3 +39,4 @@ These need a change in the module, not in this app. Don't patch `node_modules`.
 ## coreui gaps found during the image work
 
 - **`Select` shows the item's value in its trigger, not its label.** The license picker in the image forms shows `all_rights_reserved` once chosen, though the list shows "All rights reserved". The block-type pickers already behave this way. Fix in coreui so the trigger renders the selected item's label.
+- **`ArticleView` renders the lead image twice.** It lifts the first image block into a hero and then renders the same block in the body too. `ArticleViewUniqueHero.svelte` hides the body copy with CSS as a workaround; fix it in `@sveltebuilder/content` (skip the hero block in the body, or take a prop to), then delete the wrapper.

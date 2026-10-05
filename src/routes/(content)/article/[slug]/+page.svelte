@@ -1,7 +1,8 @@
 <script lang="ts">
   import { createDictionary } from 'diglossia';
   import { Button, Field, InlineNotification, Input, Textarea } from '@sveltebuilder/coreui';
-  import { ArticleView, LiveCoverageView } from '@sveltebuilder/content';
+  import { LiveCoverageView } from '@sveltebuilder/content';
+  import ArticleViewUniqueHero from '$lib/components/ArticleViewUniqueHero.svelte';
   import { buildArticleMetaTags, buildNewsArticleJsonLd } from '@sveltebuilder/content/publishing';
   import type { ScreenFormResult } from '@sveltebuilder/content/views';
   import type { ArticlePageWithCoverage } from './coverage-view';
@@ -66,7 +67,7 @@
 <main class="article-page">
   <!-- Camp 2 component: it resolves the headline, dek and every block's text from the
        dictionary by entity id, so it takes this screen's instance rather than context. -->
-  <ArticleView
+  <ArticleViewUniqueHero
     article={data.article}
     {mediaAssets}
     storageBaseUrl={data.storageBaseUrl}
@@ -135,7 +136,7 @@
         </section>
       {/if}
     {/snippet}
-  </ArticleView>
+  </ArticleViewUniqueHero>
 </main>
 
 <style>
