@@ -35,3 +35,7 @@ These need a change in the module, not in this app. Don't patch `node_modules`.
 - **Focal point and cropping** in the editor, stored in the block's `content` jsonb.
 - **Drag-and-drop and paste-to-upload** in the editor.
 - **Arabic and other locales' media copy.** Seeds cover en and fr only.
+
+## coreui gaps found during the image work
+
+- **`Select` shows the item's value in its trigger, not its label.** The license picker in the image forms shows `all_rights_reserved` once chosen, though the list shows "All rights reserved". The block-type pickers already behave this way. Fix in coreui so the trigger renders the selected item's label.

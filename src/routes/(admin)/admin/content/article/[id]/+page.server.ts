@@ -418,8 +418,14 @@ export const actions: Actions = {
     return { success: true as const };
   },
 
-  /** Uploads an image and writes its asset, rights, source and copy together. */
-  media_create: async ({ locals, request }) => {
+  /**
+   * Uploads an image, writes its asset, rights, source and copy together, then appends an image
+   * block for it to this article. One request, so the new asset cannot go unattached between two.
+   */
+  media_create: async ({ locals, params, request }) => {
+    const articleId = Number(params.id);
+    if (!Number.isInteger(articleId)) return fail(422, { error: 'Invalid article.' });
+
     const form = await request.formData();
     const file = form.get('file');
     const localeId = Number(form.get('locale_id'));
@@ -484,9 +490,9 @@ export const actions: Actions = {
       p_height: dimensions.height,
       p_license: rights.license,
       p_credit_required: rights.creditRequired,
-      p_expires_at: rights.expiresAt ?? undefined,
+      p_expires_at: rights.expiresAt,
       p_source_url: rights.sourceUrl,
-      p_license_url: rights.licenseUrl ?? undefined,
+      p_license_url: rights.licenseUrl,
       p_retrieved_at: rights.retrievedAt,
       p_locale_id: localeId,
       p_alt_text: altText,
@@ -499,6 +505,24 @@ export const actions: Actions = {
       await locals.supabase.storage.from('media').remove([pathInsideBucket]);
       if (rpcError.code === '42501') return fail(403, { error: 'Not allowed to add images.' });
       return fail(422, { error: rpcError.message });
+    }
+
+    // The asset is a reusable record in its own right, so a failure here keeps it: the editor
+    // can attach it from "use existing" rather than uploading the file again.
+    const { error: blockError } = await locals.supabase.rpc('upsert_article_block', {
+      p_article_id: articleId,
+      p_block_type: 'image',
+      p_text: '',
+      p_locale_id: localeId,
+      p_content: {},
+      p_media_asset_id: mediaAssetId,
+    });
+
+    if (blockError) {
+      if (blockError.code === '42501') return fail(403, { error: 'Not allowed to edit this body.' });
+      return fail(500, {
+        error: 'The image was saved but could not be added to the article. Choose it from the existing images.',
+      });
     }
 
     return { success: true as const, mediaAssetId };
@@ -545,9 +569,9 @@ export const actions: Actions = {
       p_media_asset_id: mediaAssetId,
       p_license: rights.license,
       p_credit_required: rights.creditRequired,
-      p_expires_at: rights.expiresAt ?? undefined,
+      p_expires_at: rights.expiresAt,
       p_source_url: rights.sourceUrl,
-      p_license_url: rights.licenseUrl ?? undefined,
+      p_license_url: rights.licenseUrl,
       p_retrieved_at: rights.retrievedAt,
     });
 

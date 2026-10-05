@@ -1123,6 +1123,84 @@ from (values
 join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
 on conflict (link, locale) do nothing;
 
+-- Image blocks: labels for uploading, crediting and licensing article images.
+-- Same scope and shape as the block above; safe to apply on its own.
+insert into local_text_link (slug, scope, entity_id)
+select v.slug, 'content', null
+from (values
+  ('content.admin.image'),
+  ('content.admin.image_upload'),
+  ('content.admin.image_existing'),
+  ('content.admin.image_file_hint'),
+  ('content.admin.alt_text'),
+  ('content.admin.alt_text_hint'),
+  ('content.admin.caption'),
+  ('content.admin.credit'),
+  ('content.admin.rights'),
+  ('content.admin.license'),
+  ('content.admin.license.all_rights_reserved'),
+  ('content.admin.license.rights_managed'),
+  ('content.admin.license.royalty_free'),
+  ('content.admin.license.creative_commons'),
+  ('content.admin.license.public_domain'),
+  ('content.admin.credit_required'),
+  ('content.admin.source_url'),
+  ('content.admin.license_url'),
+  ('content.admin.retrieved_at'),
+  ('content.admin.expires_at'),
+  ('content.admin.rights_missing')
+) as v(slug)
+on conflict do nothing;
+
+insert into local_text (link, locale, content)
+select l.id, (select id from locale where code = v.code), v.content
+from (values
+  ('content.admin.image', 'en', 'Image'),
+  ('content.admin.image', 'fr', 'Image'),
+  ('content.admin.image_upload', 'en', 'Upload a new image'),
+  ('content.admin.image_upload', 'fr', 'Téléverser une nouvelle image'),
+  ('content.admin.image_existing', 'en', 'Use an existing image'),
+  ('content.admin.image_existing', 'fr', 'Utiliser une image existante'),
+  ('content.admin.image_file_hint', 'en', 'JPEG, PNG, WebP or AVIF, up to 4 MB.'),
+  ('content.admin.image_file_hint', 'fr', 'JPEG, PNG, WebP ou AVIF, 4 Mo au maximum.'),
+  ('content.admin.alt_text', 'en', 'Alt text'),
+  ('content.admin.alt_text', 'fr', 'Texte alternatif'),
+  ('content.admin.alt_text_hint', 'en', 'Describe what the image shows for someone who can''t see it.'),
+  ('content.admin.alt_text_hint', 'fr', 'Décrivez ce que montre l’image pour une personne qui ne peut pas la voir.'),
+  ('content.admin.caption', 'en', 'Caption'),
+  ('content.admin.caption', 'fr', 'Légende'),
+  ('content.admin.credit', 'en', 'Credit'),
+  ('content.admin.credit', 'fr', 'Crédit'),
+  ('content.admin.rights', 'en', 'Rights and source'),
+  ('content.admin.rights', 'fr', 'Droits et source'),
+  ('content.admin.license', 'en', 'License'),
+  ('content.admin.license', 'fr', 'Licence'),
+  ('content.admin.license.all_rights_reserved', 'en', 'All rights reserved'),
+  ('content.admin.license.all_rights_reserved', 'fr', 'Tous droits réservés'),
+  ('content.admin.license.rights_managed', 'en', 'Rights managed'),
+  ('content.admin.license.rights_managed', 'fr', 'Droits gérés'),
+  ('content.admin.license.royalty_free', 'en', 'Royalty free'),
+  ('content.admin.license.royalty_free', 'fr', 'Libre de redevances'),
+  ('content.admin.license.creative_commons', 'en', 'Creative Commons'),
+  ('content.admin.license.creative_commons', 'fr', 'Creative Commons'),
+  ('content.admin.license.public_domain', 'en', 'Public domain'),
+  ('content.admin.license.public_domain', 'fr', 'Domaine public'),
+  ('content.admin.credit_required', 'en', 'Credit required'),
+  ('content.admin.credit_required', 'fr', 'Crédit obligatoire'),
+  ('content.admin.source_url', 'en', 'Source page'),
+  ('content.admin.source_url', 'fr', 'Page source'),
+  ('content.admin.license_url', 'en', 'License link'),
+  ('content.admin.license_url', 'fr', 'Lien vers la licence'),
+  ('content.admin.retrieved_at', 'en', 'License checked on'),
+  ('content.admin.retrieved_at', 'fr', 'Licence vérifiée le'),
+  ('content.admin.expires_at', 'en', 'License expires on'),
+  ('content.admin.expires_at', 'fr', 'Expiration de la licence'),
+  ('content.admin.rights_missing', 'en', 'Rights or source are missing. This image cannot be published until they are recorded.'),
+  ('content.admin.rights_missing', 'fr', 'Les droits ou la source sont manquants. Cette image ne peut pas être publiée tant qu’ils ne sont pas renseignés.')
+) as v(slug, code, content)
+join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_id is null
+on conflict (link, locale) do nothing;
+
 -- ── Admin navigation ───────────────────────────────────────────────────────
 -- The content admin was never in the admin nav: the article screens shipped as a
 -- bundle but nothing added a link, so they were reachable only by typing the URL.

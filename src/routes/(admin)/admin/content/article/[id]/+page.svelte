@@ -13,6 +13,9 @@
     SelectItem,
     Textarea,
   } from '@sveltebuilder/coreui'
+  import MediaAssetEditor from '$lib/components/MediaAssetEditor.svelte'
+  import MediaRightsFields from '$lib/components/MediaRightsFields.svelte'
+  import type { SubmitFunction } from '@sveltejs/kit'
   import type { Locale } from 'diglossia'
   import type { ScreenFormResult } from '@sveltebuilder/content/views'
   import type { ArticleEditorView } from './editor-view'
@@ -63,7 +66,72 @@
   const headlineValue = $derived(copyFor('headline'))
   const dekValue = $derived(copyFor('dek'))
 
-  const blockTypes = ['paragraph', 'heading', 'pullquote'] as const
+  const blockTypes = ['paragraph', 'heading', 'pullquote', 'image'] as const
+
+  // Which kind of block the add form is building. Drives which fields exist, rather than
+  // hiding them, so a field that is not in play can never block the submit by being required.
+  let newBlockType = $state<(typeof blockTypes)[number]>('paragraph')
+
+  // 'Upload new' or 'Use existing', for an image block.
+  let imageSource = $state<'upload' | 'existing'>('upload')
+
+  // Images: what an image block points at, and the chrome around its fields.
+  const mediaAssetById = $derived(new Map(data.mediaAssets.map((asset) => [asset.id, asset])))
+
+  const licenseOptions = $derived(
+    Object.fromEntries(
+      ['all_rights_reserved', 'rights_managed', 'royalty_free', 'creative_commons', 'public_domain'].map(
+        (license) => [license, t(`content.admin.license.${license}`)]
+      )
+    )
+  )
+
+  const rightsLabels = $derived({
+    license: t('content.admin.license'),
+    licenseOptions,
+    creditRequired: t('content.admin.credit_required'),
+    sourceUrl: t('content.admin.source_url'),
+    licenseUrl: t('content.admin.license_url'),
+    retrievedAt: t('content.admin.retrieved_at'),
+    expiresAt: t('content.admin.expires_at'),
+  })
+
+  const mediaLabels = $derived({
+    ...rightsLabels,
+    altText: t('content.admin.alt_text'),
+    altTextHint: t('content.admin.alt_text_hint'),
+    caption: t('content.admin.caption'),
+    credit: t('content.admin.credit'),
+    rights: t('content.admin.rights'),
+    rightsMissing: t('content.admin.rights_missing'),
+    save: dictionary.localText('action.save'),
+  })
+
+  // The picker names an image by its alt text in the writing locale, or its storage key when
+  // it has none there.
+  const assetLabel = (asset: ArticleEditorView['mediaAssets'][number]) =>
+    scoped.localeOf('alt_text', 'media_asset', asset.id) === writingLocale
+      ? scoped.localText('alt_text', 'media_asset', asset.id)
+      : asset.storageKey
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Errors for the add-image forms appear beside them, not in the page banner. A failure leaves
+  // the typed values and the chosen file in place, which a banner-and-reset would not.
+  let uploadError = $state('')
+  let existingError = $state('')
+
+  const enhanceInto =
+    (setError: (message: string) => void): SubmitFunction =>
+    () =>
+    async ({ result, update }) => {
+      if (result.type === 'failure') {
+        setError(String(result.data?.error ?? ''))
+        return
+      }
+      setError('')
+      await update()
+    }
 
   // Current filing and bylines, as id sets, so the pickers can mark what is selected.
   const selectedSections = $derived(new Set(article.sections.map((section) => section.id)))
@@ -155,6 +223,7 @@
           <ol class="admin-article__blocks">
             {#each article.blocks as block, index (block.id)}
               <li class="admin-article__block">
+                <div class="admin-article__block-body">
                 <!-- Each block is its own form: saving one cannot lose edits to
                      another, and the body stays editable while a save is in flight. -->
                 {#key writingLocale}
@@ -171,15 +240,20 @@
                       <span class="admin-article__block-position">{index + 1}</span>
                     </div>
 
-                    <Textarea
-                      name="text"
-                      value={scoped.localeOf('text', 'article_block', block.id) === writingLocale
-                        ? scoped.localText('text', 'article_block', block.id)
-                        : ''}
-                      rows={3}
-                      aria-label={t('content.admin.block_text')}
-                      required
-                    />
+                    {#if block.blockType === 'image'}
+                      <!-- An image block has no prose: its copy belongs to the asset. -->
+                      <input type="hidden" name="media_asset_id" value={block.mediaAssetId} />
+                    {:else}
+                      <Textarea
+                        name="text"
+                        value={scoped.localeOf('text', 'article_block', block.id) === writingLocale
+                          ? scoped.localText('text', 'article_block', block.id)
+                          : ''}
+                        rows={3}
+                        aria-label={t('content.admin.block_text')}
+                        required
+                      />
+                    {/if}
 
                     <div class="admin-article__block-actions">
                       <Button type="submit" size="sm" variant="secondary">
@@ -188,6 +262,21 @@
                     </div>
                   </form>
                 {/key}
+
+                {#if block.blockType === 'image' && block.mediaAssetId !== null}
+                  {@const asset = mediaAssetById.get(block.mediaAssetId)}
+                  {#if asset}
+                    <MediaAssetEditor
+                      {asset}
+                      storageBaseUrl={data.storageBaseUrl}
+                      localeId={writingLocaleId}
+                      {writingLocale}
+                      labels={mediaLabels}
+                      dictionary={scoped}
+                    />
+                  {/if}
+                {/if}
+                </div>
 
                 <div class="admin-article__block-move">
                   <form method="POST" action="?/block_move" use:enhance>
@@ -235,37 +324,147 @@
           <p class="admin-article__empty">{t('content.admin.body_empty')}</p>
         {/if}
 
-        {#key writingLocale}
-          <form method="POST" action="?/block_save" class="admin-article__add-block" use:enhance>
-            <input type="hidden" name="locale_id" value={writingLocaleId} />
-            <h3 class="admin-article__subtitle">{t('content.admin.add_block')}</h3>
+        <div class="admin-article__add-block">
+          <h3 class="admin-article__subtitle">{t('content.admin.add_block')}</h3>
 
+          <div class="admin-article__block-head">
+            <Select bind:value={newBlockType}>
+              {#each blockTypes as type (type)}
+                <SelectItem value={type} label={type === 'image' ? t('content.admin.image') : type} />
+              {/each}
+            </Select>
+          </div>
+
+          {#if newBlockType === 'image'}
             <div class="admin-article__block-head">
-              <Select name="block_type" value="paragraph">
-                {#each blockTypes as type (type)}
-                  <SelectItem value={type} label={type} />
-                {/each}
-              </Select>
-              <Select name="level" value="2">
-                <SelectItem value="2" label="H2" />
-                <SelectItem value="3" label="H3" />
-                <SelectItem value="4" label="H4" />
+              <Select bind:value={imageSource}>
+                <SelectItem value="upload" label={t('content.admin.image_upload')} />
+                <SelectItem
+                  value="existing"
+                  label={t('content.admin.image_existing')}
+                  disabled={data.mediaAssets.length === 0}
+                />
               </Select>
             </div>
 
-            <Textarea
-              name="text"
-              rows={3}
-              aria-label={t('content.admin.block_new')}
-              placeholder={t('content.admin.block_new')}
-              required
-            />
+            {#if imageSource === 'upload'}
+              {#key writingLocale}
+                <form
+                  method="POST"
+                  action="?/media_create"
+                  enctype="multipart/form-data"
+                  class="admin-article__form-stack"
+                  use:enhance={enhanceInto((message) => (uploadError = message))}
+                >
+                  <input type="hidden" name="locale_id" value={writingLocaleId} />
 
-            <div class="admin-article__actions">
-              <Button type="submit" size="sm">{t('content.admin.add_block')}</Button>
-            </div>
-          </form>
-        {/key}
+                  <Field
+                    label={t('content.admin.image')}
+                    id="media-file"
+                    hint={t('content.admin.image_file_hint')}
+                    required
+                  >
+                    <Input
+                      name="file"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      required
+                    />
+                  </Field>
+                  <Field label={t('content.admin.alt_text')} id="media-alt-text" hint={t('content.admin.alt_text_hint')} required>
+                    <Input name="alt_text" required />
+                  </Field>
+                  <Field label={t('content.admin.caption')} id="media-caption">
+                    <Textarea name="caption" rows={2} />
+                  </Field>
+                  <Field label={t('content.admin.credit')} id="media-credit">
+                    <Input name="credit" />
+                  </Field>
+
+                  <!-- Expanded: a new upload has to state its rights. -->
+                  <fieldset class="admin-article__fieldset">
+                    <legend>{t('content.admin.rights')}</legend>
+                    <MediaRightsFields
+                      idPrefix="media-new"
+                      labels={rightsLabels}
+                      values={{
+                        license: 'all_rights_reserved',
+                        creditRequired: false,
+                        sourceUrl: '',
+                        licenseUrl: '',
+                        retrievedAt: today,
+                        expiresAt: '',
+                      }}
+                    />
+                  </fieldset>
+
+                  {#if uploadError}
+                    <InlineNotification severity="error" summary={uploadError} />
+                  {/if}
+
+                  <div class="admin-article__actions">
+                    <Button type="submit" size="sm">{t('content.admin.add_block')}</Button>
+                  </div>
+                </form>
+              {/key}
+            {:else}
+              {#key writingLocale}
+                <form
+                  method="POST"
+                  action="?/block_save"
+                  class="admin-article__form-stack"
+                  use:enhance={enhanceInto((message) => (existingError = message))}
+                >
+                  <input type="hidden" name="locale_id" value={writingLocaleId} />
+                  <input type="hidden" name="block_type" value="image" />
+
+                  <Field label={t('content.admin.image_existing')} id="media-existing" required>
+                    <Select name="media_asset_id" value={String(data.mediaAssets[0]?.id ?? '')}>
+                      {#each data.mediaAssets as asset (asset.id)}
+                        <SelectItem value={String(asset.id)} label={assetLabel(asset)} />
+                      {/each}
+                    </Select>
+                  </Field>
+
+                  {#if existingError}
+                    <InlineNotification severity="error" summary={existingError} />
+                  {/if}
+
+                  <div class="admin-article__actions">
+                    <Button type="submit" size="sm">{t('content.admin.add_block')}</Button>
+                  </div>
+                </form>
+              {/key}
+            {/if}
+          {:else}
+            {#key writingLocale}
+              <form method="POST" action="?/block_save" class="admin-article__form-stack" use:enhance>
+                <input type="hidden" name="locale_id" value={writingLocaleId} />
+                <input type="hidden" name="block_type" value={newBlockType} />
+
+                {#if newBlockType === 'heading'}
+                  <Select name="level" value="2">
+                    <SelectItem value="2" label="H2" />
+                    <SelectItem value="3" label="H3" />
+                    <SelectItem value="4" label="H4" />
+                  </Select>
+                {/if}
+
+                <Textarea
+                  name="text"
+                  rows={3}
+                  aria-label={t('content.admin.block_new')}
+                  placeholder={t('content.admin.block_new')}
+                  required
+                />
+
+                <div class="admin-article__actions">
+                  <Button type="submit" size="sm">{t('content.admin.add_block')}</Button>
+                </div>
+              </form>
+            {/key}
+          {/if}
+        </div>
       </section>
 
       <!-- ── Bylines ─────────────────────────────────────────────────────── -->
@@ -599,6 +798,13 @@
     padding: 0.75rem;
     border: 1px solid var(--border-subtle, currentColor);
     border-radius: var(--radius);
+  }
+
+  .admin-article__block-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-inline-size: 0;
   }
 
   .admin-article__block-head {
