@@ -29,6 +29,7 @@ type PreviewArticleRow = {
   deleted_at: string | null;
   embargo_until: string | null;
   allow_comment: boolean;
+  lead_media_asset_id: number | null;
   created_at: string;
 };
 
@@ -70,30 +71,40 @@ export const load: PageServerLoad = async ({ locals, params }): Promise<PreviewP
   // secret: a status, a byline and a section leak nothing about an unpublished story's content.
   // The join tables' own read policies gate them on the article being public, so for a draft
   // these come back empty — a preview shows the body, not the filing.
-  const [statusResult, mediaResult, uiCopy] = await Promise.all([
+  const mediaAssetIds = [
+    ...new Set(
+      [...blocks.map((b) => b.mediaAssetId), row.lead_media_asset_id].filter(
+        (id): id is number => id !== null
+      )
+    ),
+  ];
+
+  const [statusResult, mediaResult, attributionResult, uiCopy] = await Promise.all([
     locals.supabase
       .from('article_status')
       .select('id, slug, ordinal')
       .eq('id', row.article_status_id)
       .maybeSingle(),
-    (() => {
-      const ids = [
-        ...new Set(blocks.map((b) => b.mediaAssetId).filter((id): id is number => id !== null)),
-      ];
-      return ids.length > 0
-        ? locals.supabase
-            .from('media_asset')
-            .select(
-              'id, media_type, storage_key, width, height, mime_type, uploaded_by, created_at'
-            )
-            .in('id', ids)
-        : Promise.resolve({ data: [], error: null });
-    })(),
+    mediaAssetIds.length > 0
+      ? locals.supabase
+          .from('media_asset')
+          .select('id, media_type, storage_key, width, height, mime_type, uploaded_by, created_at')
+          .in('id', mediaAssetIds)
+      : Promise.resolve({ data: [], error: null }),
+    // Public provenance for the credit lines: license and source URLs, for the asset kinds that
+    // are credited in public. A view, because the rights tables behind it are admin-only.
+    mediaAssetIds.length > 0
+      ? locals.supabase
+          .from('media_asset_attribution')
+          .select('media_asset_id, license, source_url, license_url')
+          .in('media_asset_id', mediaAssetIds)
+      : Promise.resolve({ data: [], error: null }),
     loadScopedCopy(locals.supabase, ['content'], locals.locale.code, locals.defaultLocale.code),
   ]);
 
   if (statusResult.error) throw error(500, 'Failed to load the article status.');
   if (mediaResult.error) throw error(500, 'Failed to load media.');
+  if (attributionResult.error) throw error(500, 'Failed to load media credits.');
 
   const entityCopy = await loadEntityCopy(
     locals.supabase,
@@ -120,6 +131,7 @@ export const load: PageServerLoad = async ({ locals, params }): Promise<PreviewP
       deletedAt: row.deleted_at,
       embargoUntil: row.embargo_until,
       allowComment: row.allow_comment,
+      leadMediaAssetId: row.lead_media_asset_id,
       createdAt: row.created_at,
       status: statusResult.data
         ? {
@@ -136,6 +148,12 @@ export const load: PageServerLoad = async ({ locals, params }): Promise<PreviewP
       topics: [],
       tags: [],
     },
+    attributions: (attributionResult.data ?? []).map((row) => ({
+      mediaAssetId: row.media_asset_id,
+      license: row.license,
+      sourceUrl: row.source_url,
+      licenseUrl: row.license_url,
+    })),
     storageBaseUrl: STORAGE_BASE_URL,
     mediaAssets: (mediaResult.data ?? []).map((asset) => ({
       id: asset.id,

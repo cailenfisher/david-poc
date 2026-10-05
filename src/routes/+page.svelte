@@ -11,6 +11,8 @@
   const scoped = $derived(createDictionary(data.copy))
   const t = (slug: string) => scoped.localText(slug, 'content')
 
+  const mediaAssets = $derived(new Map(data.mediaAssets.map((asset) => [asset.id, asset])))
+
   const mastheadName = $derived(scoped.localText('name', 'publisher_profile', 1))
 
   const today = $derived(
@@ -53,6 +55,9 @@
         <div class="front__lead">
           <ArticleCard
             article={lead.article}
+            {mediaAssets}
+            blocks={lead.article.blocks}
+            storageBaseUrl={data.storageBaseUrl}
             status={lead.article.status}
             bylines={lead.article.bylines}
             sections={lead.article.sections}
@@ -70,6 +75,9 @@
           {#each secondaries as slot (slot.article.id)}
             <ArticleCard
               article={slot.article}
+              {mediaAssets}
+              blocks={slot.article.blocks}
+              storageBaseUrl={data.storageBaseUrl}
               status={slot.article.status}
               bylines={slot.article.bylines}
               sections={slot.article.sections}
@@ -91,6 +99,9 @@
       {#each river as slot (slot.article.id)}
         <ArticleCard
           article={slot.article}
+          {mediaAssets}
+          blocks={slot.article.blocks}
+          storageBaseUrl={data.storageBaseUrl}
           status={slot.article.status}
           bylines={slot.article.bylines}
           sections={slot.article.sections}
@@ -109,6 +120,9 @@
         {#each briefs as slot (slot.article.id)}
           <ArticleCard
             article={slot.article}
+            {mediaAssets}
+            blocks={slot.article.blocks}
+            storageBaseUrl={data.storageBaseUrl}
             status={slot.article.status}
             bylines={slot.article.bylines}
             sections={slot.article.sections}
@@ -130,6 +144,9 @@
         {#each data.latest as article (article.id)}
           <ArticleCard
             {article}
+            {mediaAssets}
+            blocks={article.blocks}
+            storageBaseUrl={data.storageBaseUrl}
             status={article.status}
             bylines={article.bylines}
             sections={article.sections}

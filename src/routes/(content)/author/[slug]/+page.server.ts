@@ -1,7 +1,14 @@
 import { error } from '@sveltejs/kit';
 import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy';
 import type { ArticleRow } from '@sveltebuilder/content/views';
-import { ARTICLE_COLUMNS, toArticleRow, toOne, type RawArticle } from '../../../article-rows';
+import {
+  ARTICLE_COLUMNS,
+  STORAGE_BASE_URL,
+  loadLeadMediaAssets,
+  toArticleRow,
+  toOne,
+  type RawArticle,
+} from '../../../article-rows';
 import type { PageServerLoad } from './$types';
 
 // POC ADDITION — the author page.
@@ -12,10 +19,10 @@ import type { PageServerLoad } from './$types';
 // a quality signal problem on the one thing this module is meant to get right, which
 // is why this is the first gap worth closing.
 //
-// Built here rather than with the module's AuthorProfileView: that component passes a
-// `mediaAssets` prop ArticleCard does not declare (a type error recorded in
-// docs/DEFERRED.md and still unfixed) and wants the pre-resolved ArticleWithCopy
-// family, while every screen in this project passes entity rows plus a dictionary.
+// Built here rather than with the module's AuthorProfileView: that component wants the
+// pre-resolved ArticleWithCopy family, while every screen in this project passes entity
+// rows plus a dictionary. (Its other blocker, passing a `mediaAssets` prop ArticleCard did
+// not declare, is fixed in @sveltebuilder/content 1.1.)
 //
 // No auth guard: the module's RLS decides which articles a reader sees.
 
@@ -45,6 +52,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     .from('article_byline')
     .select(`article!inner(${ARTICLE_COLUMNS})`)
     .eq('author_profile_id', author.id)
+    // Image blocks only: a card needs its picture, not the body. See ARTICLE_COLUMNS.
+    .eq('article.article_block.block_type', 'image')
     .order('published_at', { ascending: false, referencedTable: 'article' });
 
   if (bylineResult.error) throw error(500, 'Failed to load the author’s articles.');
@@ -57,7 +66,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     if (article !== null) articles.push(article);
   }
 
-  const [uiCopy, entityCopy] = await Promise.all([
+  const [mediaAssets, uiCopy, entityCopy] = await Promise.all([
+    loadLeadMediaAssets(locals.supabase, articles),
     loadScopedCopy(locals.supabase, ['content'], locals.locale.code, locals.defaultLocale.code),
     loadEntityCopy(
       locals.supabase,
@@ -79,6 +89,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
   return {
     author,
     articles,
+    storageBaseUrl: STORAGE_BASE_URL,
+    mediaAssets,
     localeCode: locals.locale.code,
     copy: [...uiCopy, ...entityCopy],
   };

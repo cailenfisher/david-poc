@@ -11,7 +11,6 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { locale, localTextLink } from '@sveltebuilder/local-text-schema/schema';
-import { mediaAsset } from '@sveltebuilder/content/schema';
 
 // Reference Supabase's managed auth schema. The table is `auth.users` (plural) with
 // a uuid PK — this is Supabase's fixed schema, not something we define.
@@ -102,27 +101,6 @@ export const pageView = pgTable(
     index('idx_page_view_created_at').on(table.createdAt),
   ],
 );
-
-// ── Image provenance ──────────────────────────────────────────────────────────
-//
-// media_asset_rights (owned by the content module) records which kind of license
-// applies. It cannot say where the image came from or which exact license, and
-// creative_commons alone cannot tell CC BY 4.0 from CC BY-SA 2.0. This app-owned table
-// holds the evidence. The creator's name and attribution line are not here: they are
-// shown to readers and localized, so they live as `credit` copy under the media_asset
-// scope. Admin only under RLS (supabase/supplemental/10-media-asset-write.sql).
-
-export const mediaAssetSource = pgTable('media_asset_source', {
-  id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
-  mediaAssetId: bigint('media_asset_id', { mode: 'number' })
-    .notNull()
-    .unique()
-    .references(() => mediaAsset.id, { onDelete: 'cascade' }),
-  sourceUrl: text('source_url').notNull(),
-  licenseUrl: text('license_url'),
-  retrievedAt: timestamp('retrieved_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
 
 export type UserAccount = typeof userAccount.$inferSelect;
 export type NewUserAccount = typeof userAccount.$inferInsert;

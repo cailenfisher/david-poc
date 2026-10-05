@@ -1,7 +1,14 @@
 import { error, redirect } from '@sveltejs/kit';
 import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy';
 import type { ArticleRow } from '@sveltebuilder/content/views';
-import { ARTICLE_COLUMNS, toArticleRow, toOne, type RawArticle } from './article-rows';
+import {
+  ARTICLE_COLUMNS,
+  STORAGE_BASE_URL,
+  loadLeadMediaAssets,
+  toArticleRow,
+  toOne,
+  type RawArticle,
+} from './article-rows';
 import type { PageServerLoad } from './$types';
 
 // POC ADDITION — the front page.
@@ -53,11 +60,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
           .from('front_slot')
           .select(`position, layout_variant, pinned_until, article!inner(${ARTICLE_COLUMNS})`)
           .eq('front_id', front.id)
+          // Image blocks only: a card needs its picture, not the body. See ARTICLE_COLUMNS.
+          .eq('article.article_block.block_type', 'image')
           .order('position')
       : Promise.resolve({ data: [], error: null }),
     locals.supabase
       .from('article')
       .select(ARTICLE_COLUMNS)
+      .eq('article_block.block_type', 'image')
       .order('published_at', { ascending: false })
       .limit(10),
     locals.supabase
@@ -105,7 +115,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const allArticles = [...slots.map((slot) => slot.article), ...latest];
 
-  const [uiCopy, entityCopy] = await Promise.all([
+  const [mediaAssets, uiCopy, entityCopy] = await Promise.all([
+    loadLeadMediaAssets(locals.supabase, allArticles),
     loadScopedCopy(
       locals.supabase,
       ['content', 'publisher_profile'],
@@ -144,6 +155,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     slots,
     latest,
     sections,
+    storageBaseUrl: STORAGE_BASE_URL,
+    mediaAssets,
     localeCode: locals.locale.code,
     copy: [...uiCopy, ...entityCopy],
   };

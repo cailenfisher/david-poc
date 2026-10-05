@@ -11,6 +11,8 @@
   const scoped = $derived(createDictionary(data.copy));
   const t = (slug: string) => scoped.localText(slug, 'content');
 
+  const mediaAssets = $derived(new Map(data.mediaAssets.map((asset) => [asset.id, asset])));
+
   const sectionName = $derived(scoped.localText('name', 'section', data.section.id));
 
   const href = (page: number) =>
@@ -54,6 +56,9 @@
           locale={data.localeCode}
           href="/article/{article.canonicalSlug}"
           variant={index === 0 ? 'lead' : 'river'}
+          {mediaAssets}
+          blocks={article.blocks}
+          storageBaseUrl={data.storageBaseUrl}
           dictionary={scoped}
         />
       {/each}
