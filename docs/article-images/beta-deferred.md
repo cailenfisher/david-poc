@@ -13,6 +13,10 @@ These need a change in the module, not in this app. Don't patch `node_modules`.
 - **Gallery and video blocks.** `ArticleBlockRenderer` already renders `gallery` and `video` blocks via `MediaFigure`. The editor (step 4) only offers `image`. Galleries need an ordered asset list in the block's `content` jsonb and a multi-select picker; video needs `media_type = 'video'`, bucket MIME types and a poster frame.
 - **Lead-image choice.** The `og:image` and JSON-LD image are the *first image block*. Choosing a lead image explicitly, or adding a social-only crop, needs a module field.
 - **Alt text validated in every published locale at once.** `validateArticleForPublish` checks the single locale being published. Publishing per locale is the POC's model; a "publish everywhere" flow would need this.
+- **`ArticleView` renders the lead image twice.** It lifts the first image block into a hero and then renders the same block in the body too. `ArticleViewUniqueHero.svelte` hides the body copy with CSS as a workaround; skip the hero block in the body (or take a prop to), then delete the wrapper. Side effect worth deciding on: the first image is always lifted to the top, wherever the editor places it, so an editor cannot put the first image mid-body.
+- **`buildArticleMetaTags` emits empty `og:image:alt` / `twitter:image:alt`.** It reads `leadImage.altText`, but `MediaAsset` carries no copy, so the value is undefined and the tag has no content. It should resolve `alt_text` through the dictionary it already receives. The article page overrides the two tags as a workaround.
+- **`MediaFigure` credit cannot wrap.** `.media-figure__credit` is `white-space: nowrap; flex-shrink: 0`, so a credit like "Photo: Name / Wikimedia Commons, CC BY-SA 4.0, resized" forces horizontal scroll on a phone. `ArticleViewUniqueHero.svelte` overrides it. Let the credit wrap, and let the caption row wrap.
+- **`validateArticleForPublish` accepts fallback-locale alt text.** The check resolves through the dictionary, so a missing French alt text passes on the English one. The app's `validateImageRights` checks `localeOf` against the publishing locale.
 
 ## Delivery and performance
 
@@ -39,4 +43,3 @@ These need a change in the module, not in this app. Don't patch `node_modules`.
 ## coreui gaps found during the image work
 
 - **`Select` shows the item's value in its trigger, not its label.** The license picker in the image forms shows `all_rights_reserved` once chosen, though the list shows "All rights reserved". The block-type pickers already behave this way. Fix in coreui so the trigger renders the selected item's label.
-- **`ArticleView` renders the lead image twice.** It lifts the first image block into a hero and then renders the same block in the body too. `ArticleViewUniqueHero.svelte` hides the body copy with CSS as a workaround; fix it in `@sveltebuilder/content` (skip the hero block in the body, or take a prop to), then delete the wrapper.

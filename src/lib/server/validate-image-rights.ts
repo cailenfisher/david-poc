@@ -7,9 +7,9 @@ import type { MediaAssetWithRights } from '$lib/types/media-asset';
  * Returns human-readable problems, empty when the article is fine, so the editor sees every one
  * at once. Pure, like the module's own validators.
  *
- * `localeCode` is the locale being published. A credit that exists only as the fallback
- * locale's text does not count: a French page must not go out crediting in English, or with no
- * credit at all once the fallback changes.
+ * `localeCode` is the locale being published. Alt text or a credit that exists only as the
+ * fallback locale's text does not count: a French page must not go out crediting in English,
+ * or with no credit at all once the fallback changes.
  */
 export function validateImageRights(
   blocks: Pick<ArticleBlock, 'id' | 'blockType' | 'position' | 'mediaAssetId'>[],
@@ -29,6 +29,14 @@ export function validateImageRights(
     if (block.mediaAssetId === null) {
       problems.push(`${label}: no image is attached.`);
       continue;
+    }
+
+    // The module only checks that some alt text resolves, and a missing translation resolves to
+    // the fallback locale's. A French page with English alt text fails the readers it is for.
+    const altText = dictionary.localText('alt_text', 'media_asset', block.mediaAssetId);
+    const altLocale = dictionary.localeOf('alt_text', 'media_asset', block.mediaAssetId);
+    if (altText?.trim() && !altText.startsWith('[missing:') && altLocale !== localeCode) {
+      problems.push(`${label}: alt text is not written in this language.`);
     }
 
     const asset = assetById.get(block.mediaAssetId);

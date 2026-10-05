@@ -83,6 +83,9 @@
   .app {
     display: grid;
     grid-template-rows: auto 1fr auto;
+    /* minmax(0, ...) rather than the implicit auto track: an auto track grows to its widest
+       content, so one long unbroken line made the whole page wider than a phone. */
+    grid-template-columns: minmax(0, 1fr);
     min-height: 100dvh;
   }
 
@@ -90,6 +93,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
     padding: 0.75rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
   }
