@@ -114,3 +114,19 @@
     font-size: 1rem;
   }
 }
+
+/* ── Image credits: let a long credit wrap ───────────────────────────────────
+   The content module's MediaFigure sets the credit to white-space: nowrap with
+   flex-shrink: 0, so a credit like "Photo: Name / Wikimedia Commons · CC BY-SA 4.0"
+   cannot wrap and forces the page wider than a phone. Let it wrap under the caption
+   instead. Unlayered like the module's scoped styles, so these selectors are one
+   element more specific than its .class.svelte-hash pair. Remove once MediaFigure
+   wraps the credit itself. */
+figure.media-figure .media-figure__caption {
+  flex-wrap: wrap;
+}
+
+figure.media-figure .media-figure__credit {
+  white-space: normal;
+  flex-shrink: 1;
+}

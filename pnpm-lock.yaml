@@ -19,13 +19,13 @@ importers:
         version: 2.117.2
       '@sveltebuilder/content':
         specifier: latest
-        version: 0.1.1(@supabase/supabase-js@2.117.2)(@sveltebuilder/coreui@0.1.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1))(diglossia@0.1.1(svelte@5.57.1))(svelte@5.57.1)
+        version: 1.1.0(@supabase/supabase-js@2.117.2)(@sveltebuilder/coreui@0.2.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1))(diglossia@0.1.1(svelte@5.57.1))(svelte@5.57.1)
       '@sveltebuilder/coreui':
         specifier: latest
-        version: 0.1.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)
+        version: 0.2.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)
       '@sveltebuilder/local-text-schema':
         specifier: latest
-        version: 0.2.0
+        version: 0.2.1
       diglossia:
         specifier: latest
         version: 0.1.1(svelte@5.57.1)
@@ -35,7 +35,7 @@ importers:
     devDependencies:
       '@sveltebuilder/cli':
         specifier: latest
-        version: 0.0.14
+        version: 0.0.15
       '@sveltejs/adapter-auto':
         specifier: ^7.0.1
         version: 7.0.1(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))
@@ -589,26 +589,26 @@ packages:
       '@opentelemetry/api':
         optional: true
 
-  '@sveltebuilder/cli@0.0.14':
-    resolution: {integrity: sha512-grZN/fFmFxmjRDb3cq4HcYT5h8vbmb8m97hRAn/WZBnFEAcWRQvSPnkWro0ttEvyd+4VS1rSWWSayRgjA/7bvg==}
+  '@sveltebuilder/cli@0.0.15':
+    resolution: {integrity: sha512-KgY9L/peC+BHoj9hnWpRN7dDzO3Y6mIro2jVYgqIa/hWAb37fZF0C7YG0G8VWS9iF/l2Wm8+UbYCcnLw0Pe0JQ==}
     hasBin: true
 
-  '@sveltebuilder/content@0.1.1':
-    resolution: {integrity: sha512-mFBJ50JJIpD7IFkzWS5TRTs0T40+DD6+RmQV1keeZQk/v7vBbWNlqBdO0tYDljaXtRe1PHS29MVhOFDkhTv+iA==}
+  '@sveltebuilder/content@1.1.0':
+    resolution: {integrity: sha512-elmxmEkUZub+q8V6bu+vjyRzfGZndNY776YoN++TMFRaX8gHkubOiF/RjYr4BNtFG1iiJQpe48QHXsT/teoEtw==}
     peerDependencies:
       '@supabase/supabase-js': '>=2.0.0'
-      '@sveltebuilder/coreui': ^0.1.1
+      '@sveltebuilder/coreui': ^0.2.1
       diglossia: ^0.1.0
       svelte: '>=5.0.0'
 
-  '@sveltebuilder/coreui@0.1.1':
-    resolution: {integrity: sha512-XvRsFnx8QaW1Rmxrwb4CXDAPf9LpRmABLgEb1zlqcN7SAjYKhF2k20CSj297/mVhEBskBvG9HXeDx24Pu5AYvA==}
+  '@sveltebuilder/coreui@0.2.1':
+    resolution: {integrity: sha512-XUnvmPKi6WfxhVck7swcBbWjCCRNrppLxboKCHBK8FYMlh1H1hVvoqFJpFSfcWCs+AbXD2DLlupF/PH70fSFTQ==}
     peerDependencies:
       bits-ui: ^2.18.1
       svelte: ^5.0.0
 
-  '@sveltebuilder/local-text-schema@0.2.0':
-    resolution: {integrity: sha512-jDx/nmFoXeapRQzG9fR6Nf9DFYQXyeJoo5v7HqhVRy9Q9eGIsKocm5kwZkEKmOozjyoVI7Rf98TK7Djl0FknMw==}
+  '@sveltebuilder/local-text-schema@0.2.1':
+    resolution: {integrity: sha512-rppS5mxsS8gPnwr2ShvoAkZvESKEuUIm5pzNeQGtA0AgFP6eIrNPATexdw/o1HWiBDakTt23n0F3b9QjlcFanA==}
 
   '@sveltejs/acorn-typescript@1.0.13':
     resolution: {integrity: sha512-wgKggnhZVL9Bfx1OaKKTrYY9BFRk6C8UAkQNUcIv1+llzYrIqy+RZm5HPKzn0NpEBvTVhTqB4kQyllZywsRBRQ==}
@@ -1558,9 +1558,9 @@ snapshots:
       '@supabase/realtime-js': 2.117.2
       '@supabase/storage-js': 2.117.2
 
-  '@sveltebuilder/cli@0.0.14':
+  '@sveltebuilder/cli@0.0.15':
     dependencies:
-      '@sveltebuilder/local-text-schema': 0.2.0
+      '@sveltebuilder/local-text-schema': 0.2.1
       commander: 12.1.0
       drizzle-kit: 0.29.1
       glob: 11.1.0
@@ -1597,10 +1597,10 @@ snapshots:
       - sqlite3
       - supports-color
 
-  '@sveltebuilder/content@0.1.1(@supabase/supabase-js@2.117.2)(@sveltebuilder/coreui@0.1.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1))(diglossia@0.1.1(svelte@5.57.1))(svelte@5.57.1)':
+  '@sveltebuilder/content@1.1.0(@supabase/supabase-js@2.117.2)(@sveltebuilder/coreui@0.2.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1))(diglossia@0.1.1(svelte@5.57.1))(svelte@5.57.1)':
     dependencies:
       '@supabase/supabase-js': 2.117.2
-      '@sveltebuilder/coreui': 0.1.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)
+      '@sveltebuilder/coreui': 0.2.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)
       diglossia: 0.1.1(svelte@5.57.1)
       drizzle-orm: 0.38.4
       svelte: 5.57.1
@@ -1635,12 +1635,12 @@ snapshots:
       - sql.js
       - sqlite3
 
-  '@sveltebuilder/coreui@0.1.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)':
+  '@sveltebuilder/coreui@0.2.1(bits-ui@2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1))(svelte@5.57.1)':
     dependencies:
       bits-ui: 2.19.4(@internationalized/date@3.12.4)(@sveltejs/kit@2.70.3(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)(typescript@5.9.3)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.19.12)))(svelte@5.57.1)
       svelte: 5.57.1
 
-  '@sveltebuilder/local-text-schema@0.2.0':
+  '@sveltebuilder/local-text-schema@0.2.1':
     dependencies:
       drizzle-orm: 0.38.4
     transitivePeerDependencies:

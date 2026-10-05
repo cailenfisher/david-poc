@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDictionary } from 'diglossia';
   import { InlineNotification } from '@sveltebuilder/coreui';
-  import ArticleViewUniqueHero from '$lib/components/ArticleViewUniqueHero.svelte';
+  import { ArticleView } from '@sveltebuilder/content';
   import type { PreviewPageView } from '@sveltebuilder/content/views';
 
   let { data }: { data: PreviewPageView } = $props();
@@ -25,9 +25,10 @@
   <InlineNotification severity="warning" summary={t('content.preview.banner')} />
 
   <main class="preview-page__article">
-    <ArticleViewUniqueHero
+    <ArticleView
       article={data.article}
       mediaAssets={new Map(data.mediaAssets.map((asset) => [asset.id, asset]))}
+      attributions={new Map(data.attributions.map((row) => [row.mediaAssetId, row]))}
       storageBaseUrl={data.storageBaseUrl}
       locale={data.localeCode}
       dictionary={scoped}

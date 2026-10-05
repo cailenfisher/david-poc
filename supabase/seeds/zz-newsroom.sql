@@ -914,8 +914,8 @@ on conflict (link, locale) do nothing;
 -- ── Author expertise ───────────────────────────────────────────────────────
 -- AuthorProfileView resolves name, bio and expertise. The POC's own author page
 -- renders name + bio + expertise directly rather than using that component (it
--- passes a `mediaAssets` prop ArticleCard does not declare — see DEFERRED.md), but
--- the copy is seeded under the same slugs so either renderer works.
+-- wants the pre-resolved ArticleWithCopy shape), but the copy is seeded under the
+-- same slugs so either renderer works.
 insert into local_text_link (slug, scope, entity_id)
 select 'expertise', 'author_profile', a.id from author_profile a
 on conflict do nothing;
@@ -1202,7 +1202,7 @@ join local_text_link l on l.scope = 'content' and l.slug = v.slug and l.entity_i
 on conflict (link, locale) do nothing;
 
 -- The images_credited checklist item used to read "Images credited", a box ticked on faith.
--- The publish gate now checks the rights data itself (validate-image-rights.ts), so the item
+-- The publish gate now checks the rights data itself (validateArticleForPublish), so the item
 -- means a human has looked at the credits as they appear. content.sql seeds the original
 -- label with do nothing, so this overrides it with do update and never edits that file.
 insert into local_text (link, locale, content)

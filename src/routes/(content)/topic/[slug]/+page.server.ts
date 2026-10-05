@@ -1,7 +1,14 @@
 import { error } from '@sveltejs/kit';
 import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy';
 import type { ArticleRow } from '@sveltebuilder/content/views';
-import { ARTICLE_COLUMNS, toArticleRow, toOne, type RawArticle } from '../../../article-rows';
+import {
+  ARTICLE_COLUMNS,
+  STORAGE_BASE_URL,
+  loadLeadMediaAssets,
+  toArticleRow,
+  toOne,
+  type RawArticle,
+} from '../../../article-rows';
 import type { PageServerLoad } from './$types';
 
 // POC ADDITION — the topic page.
@@ -43,6 +50,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
       .from('article_topic')
       .select(`article!inner(${ARTICLE_COLUMNS})`, { count: 'exact' })
       .eq('topic_id', topic.id)
+      // Image blocks only: a card needs its picture, not the body. See ARTICLE_COLUMNS.
+      .eq('article.article_block.block_type', 'image')
       .order('published_at', { ascending: false, referencedTable: 'article' })
       .range(from, from + PER_PAGE - 1),
     locals.supabase
@@ -70,7 +79,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     createdAt: row.created_at,
   }));
 
-  const [uiCopy, entityCopy] = await Promise.all([
+  const [mediaAssets, uiCopy, entityCopy] = await Promise.all([
+    loadLeadMediaAssets(locals.supabase, articles),
     loadScopedCopy(locals.supabase, ['content'], locals.locale.code, locals.defaultLocale.code),
     loadEntityCopy(
       locals.supabase,
@@ -90,6 +100,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     topic,
     allTopics,
     articles,
+    storageBaseUrl: STORAGE_BASE_URL,
+    mediaAssets,
     total: articleResult.count ?? articles.length,
     page,
     perPage: PER_PAGE,

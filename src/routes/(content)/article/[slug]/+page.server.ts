@@ -11,7 +11,7 @@ import type { Actions, PageServerLoad } from './$types';
 // supabase/supplemental/02-content-rls.sql.
 
 const ARTICLE_COLUMNS =
-  'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, created_at, article_status!inner(id, slug, ordinal), article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))';
+  'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, lead_media_asset_id, created_at, article_status!inner(id, slug, ordinal), article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))';
 
 const toOne = <T>(embed: T | T[] | null): T | null =>
   embed === null ? null : Array.isArray(embed) ? (embed[0] ?? null) : embed;
@@ -109,6 +109,7 @@ export const load: PageServerLoad = async ({
     deletedAt: row.deleted_at,
     embargoUntil: row.embargo_until,
     allowComment: row.allow_comment,
+    leadMediaAssetId: row.lead_media_asset_id,
     createdAt: row.created_at,
     status: { id: status.id, slug: status.slug, ordinal: status.ordinal },
     blocks,
@@ -118,11 +119,24 @@ export const load: PageServerLoad = async ({
     tags,
   };
 
+  // The blocks' assets, plus the editor's explicit lead image, which the body may not contain.
   const mediaAssetIds = [
-    ...new Set(blocks.map((block) => block.mediaAssetId).filter((id): id is number => id !== null)),
+    ...new Set(
+      [...blocks.map((block) => block.mediaAssetId), row.lead_media_asset_id].filter(
+        (id): id is number => id !== null
+      )
+    ),
   ];
 
-  const [commentsResult, publisherResult, mediaResult, coverageResult, uiCopy, entityCopy] = await Promise.all([
+  const [
+    commentsResult,
+    publisherResult,
+    mediaResult,
+    attributionResult,
+    coverageResult,
+    uiCopy,
+    entityCopy,
+  ] = await Promise.all([
     // RLS already restricts this to approved comments on publicly visible articles, so the
     // only filter here is the article, and the status predicate is not repeated.
     article.allowComment
@@ -145,6 +159,14 @@ export const load: PageServerLoad = async ({
           .from('media_asset')
           .select('id, media_type, storage_key, width, height, mime_type, uploaded_by, created_at')
           .in('id', mediaAssetIds)
+      : Promise.resolve({ data: [], error: null }),
+    // Public provenance for the credit lines: license and source URLs, for the asset kinds that
+    // are credited in public. A view, because the rights tables behind it are admin-only.
+    mediaAssetIds.length > 0
+      ? locals.supabase
+          .from('media_asset_attribution')
+          .select('media_asset_id, license, source_url, license_url')
+          .in('media_asset_id', mediaAssetIds)
       : Promise.resolve({ data: [], error: null }),
     // POC ADDITION: the live coverage thread, if this article has one. Its own RLS gates
     // it on the article being publicly visible, so no status predicate is repeated here.
@@ -186,6 +208,7 @@ export const load: PageServerLoad = async ({
 
   if (commentsResult.error) throw error(500, 'Failed to load comments.');
   if (mediaResult.error) throw error(500, 'Failed to load media.');
+  if (attributionResult.error) throw error(500, 'Failed to load media credits.');
   if (coverageResult.error) throw error(500, 'Failed to load live coverage.');
 
   // POC ADDITION. Shaped for LiveCoverageView, which is Camp 2: the `text` on each
@@ -261,6 +284,12 @@ export const load: PageServerLoad = async ({
       mimeType: asset.mime_type,
       uploadedBy: asset.uploaded_by,
       createdAt: asset.created_at,
+    })),
+    attributions: (attributionResult.data ?? []).map((row) => ({
+      mediaAssetId: row.media_asset_id,
+      license: row.license,
+      sourceUrl: row.source_url,
+      licenseUrl: row.license_url,
     })),
     localeCode: locals.locale.code,
     liveCoverage,

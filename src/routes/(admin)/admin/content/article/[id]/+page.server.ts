@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { createDictionary } from 'diglossia';
-import { validateArticleForPublish } from '@sveltebuilder/content/publishing';
+import { validateArticleForPublish, type ImageProvenance } from '@sveltebuilder/content/publishing';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy';
 import {
@@ -11,7 +11,6 @@ import {
   parseRightsFields,
   readImageDimensions,
 } from '$lib/server/media-upload';
-import { validateImageRights } from '$lib/server/validate-image-rights';
 import type { MediaAssetWithRights } from '$lib/types/media-asset';
 import type { ChecklistEntry } from '@sveltebuilder/content/views';
 import type { ArticleEditorView } from './editor-view';
@@ -38,7 +37,7 @@ export const load: PageServerLoad = async ({ locals, params }): Promise<ArticleE
       locals.supabase
         .from('article')
         .select(
-          'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, created_at, article_status!inner(id, slug, ordinal), article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))'
+          'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, lead_media_asset_id, created_at, article_status!inner(id, slug, ordinal), article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))'
         )
         .eq('id', id)
         .maybeSingle(),
@@ -201,6 +200,7 @@ export const load: PageServerLoad = async ({ locals, params }): Promise<ArticleE
       deletedAt: row.deleted_at,
       embargoUntil: row.embargo_until,
       allowComment: row.allow_comment,
+      leadMediaAssetId: row.lead_media_asset_id,
       createdAt: row.created_at,
       status: { id: status.id, slug: status.slug, ordinal: status.ordinal },
       blocks,
@@ -254,9 +254,10 @@ export const actions: Actions = {
   //
   // The required-checklist gate is in content_transition_article_status, because it must not be
   // bypassable by posting this form directly. The editorial checks — a headline inside Google's
-  // length limit, a dek, a byline, a section, text in every prose block, alt text on every image
-  // — run here, because they need a dictionary to resolve the copy and the answer depends on
-  // which locale is being published. SQL has no dictionary.
+  // length limit, a dek, a byline, a section, text in every prose block, and on every image alt
+  // text, rights, a source, an unexpired license and a credit in this locale — run here, because
+  // they need a dictionary to resolve the copy and the answer depends on which locale is being
+  // published. SQL has no dictionary.
   transition: async ({ locals, params, request }) => {
     const id = Number(params.id);
     if (!Number.isInteger(id)) throw error(404, 'Not found.');
@@ -266,41 +267,43 @@ export const actions: Actions = {
     if (!statusSlug) return fail(422, { error: 'Choose a status.' });
 
     if (statusSlug === 'published') {
-      const { article, publisher, copy, mediaAssets } = await loadArticleForValidation(locals, id);
+      const { article, publisher, copy, imageProvenance } = await loadArticleForValidation(
+        locals,
+        id
+      );
       if (article === null) throw error(404, 'Article not found.');
 
       const dictionary = createDictionary(copy);
+      const problems: string[] = [];
 
-      // The module checks the editorial basics, including alt text; the app checks that every
-      // image may be used. Both run, and their problems are reported together, so an editor
-      // fixes the lot in one pass instead of meeting them one failed publish at a time.
-      let moduleMessage: string | null = null;
       try {
-        validateArticleForPublish(article, publisher, dictionary);
+        validateArticleForPublish(article, publisher, dictionary, {
+          imageProvenance,
+          locale: locals.locale.code,
+        });
       } catch (validationError) {
-        moduleMessage =
+        problems.push(
           validationError instanceof Error
             ? validationError.message
-            : 'This article is not ready to publish.';
+            : 'This article is not ready to publish.'
+        );
       }
 
-      const imageProblems = validateImageRights(
-        article.blocks,
-        mediaAssets,
-        dictionary,
-        locals.locale.code
-      );
-
-      if (moduleMessage !== null || imageProblems.length > 0) {
-        return fail(422, {
-          error:
-            moduleMessage === null
-              ? imageProblems.join(' ')
-              : [moduleMessage, ...imageProblems.map((problem) => `[imageRights] ${problem}`)].join(
-                  '\n'
-                ),
-        });
+      // The module checks that alt text resolves, and localText falls back to the default
+      // locale, so English alt text passes on a French page. It checks the credit's locale but
+      // not the alt text's; until it does, that one check stays here.
+      for (const block of article.blocks) {
+        if (block.blockType !== 'image' || block.mediaAssetId === null) continue;
+        const altText = dictionary.localText('alt_text', 'media_asset', block.mediaAssetId);
+        const altLocale = dictionary.localeOf('alt_text', 'media_asset', block.mediaAssetId);
+        if (altText?.trim() && !altText.startsWith('[missing:') && altLocale !== locals.locale.code) {
+          problems.push(
+            `[block.${block.id}.altText] Image block ${block.position} has alt text, but none written in ${locals.locale.code}.`
+          );
+        }
       }
+
+      if (problems.length > 0) return fail(422, { error: problems.join('\n') });
     }
 
     const { error: rpcError } = await locals.supabase.rpc('content_transition_article_status', {
@@ -507,6 +510,7 @@ export const actions: Actions = {
     }
 
     const { data: mediaAssetId, error: rpcError } = await locals.supabase.rpc('create_media_asset', {
+      p_media_type: 'image',
       p_storage_key: storageKey,
       p_mime_type: file.type,
       p_width: dimensions.width,
@@ -721,6 +725,54 @@ export const actions: Actions = {
     return { success: true as const };
   },
 
+  /**
+   * Which image leads the article: its hero, its cards, og:image and the JSON-LD image. Blank
+   * clears the choice, which falls back to the first image block. Only an image already in the
+   * body may be chosen: publish validation checks the rights of block images, so a lead from
+   * outside the body would reach og:image without its license ever being checked.
+   */
+  lead_image: async ({ locals, params, request }) => {
+    const articleId = Number(params.id);
+    if (!Number.isInteger(articleId)) return fail(422, { error: 'Invalid article.' });
+
+    const form = await request.formData();
+    // 'automatic' (or nothing) clears the choice; see LEAD_IMAGE_AUTOMATIC in the page.
+    const raw = String(form.get('lead_media_asset_id') ?? '').trim();
+    const leadMediaAssetId = raw === '' || raw === 'automatic' ? null : Number(raw);
+
+    if (leadMediaAssetId !== null) {
+      if (!Number.isInteger(leadMediaAssetId)) return fail(422, { error: 'Invalid image.' });
+
+      const { data: matching, error: readError } = await locals.supabase
+        .from('article_block')
+        .select('id')
+        .eq('article_id', articleId)
+        .eq('block_type', 'image')
+        .eq('media_asset_id', leadMediaAssetId)
+        .limit(1);
+      if (readError) return fail(500, { error: 'Failed to read the body.' });
+      if ((matching ?? []).length === 0) {
+        return fail(422, { error: 'The lead image must be one of the images in the body.' });
+      }
+    }
+
+    // .select() so an update RLS filtered to zero rows is reported rather than
+    // reading as a successful save.
+    const { data: saved, error: updateError } = await locals.supabase
+      .from('article')
+      .update({ lead_media_asset_id: leadMediaAssetId })
+      .eq('id', articleId)
+      .select('id');
+
+    if (updateError) {
+      if (updateError.code === '42501') return fail(403, { error: 'Not allowed to edit this article.' });
+      return fail(500, { error: 'Failed to save the lead image.' });
+    }
+    if ((saved ?? []).length === 0) return fail(403, { error: 'Not allowed to edit this article.' });
+
+    return { success: true as const };
+  },
+
   /** Slug, embargo, comment policy. One row, so a plain update rather than an RPC. */
   publishing: async ({ locals, params, request }) => {
     const articleId = Number(params.id);
@@ -842,7 +894,7 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
     locals.supabase
       .from('article')
       .select(
-        'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, created_at, article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))'
+        'id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, lead_media_asset_id, created_at, article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at))'
       )
       .eq('id', id)
       .maybeSingle(),
@@ -854,7 +906,7 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
   ]);
 
   if (articleResult.error || !articleResult.data) {
-    return { article: null, publisher: null, copy: [], mediaAssets: [] };
+    return { article: null, publisher: null, copy: [], imageProvenance: new Map() };
   }
 
   const row = articleResult.data;
@@ -880,6 +932,7 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
     deletedAt: row.deleted_at,
     embargoUntil: row.embargo_until,
     allowComment: row.allow_comment,
+    leadMediaAssetId: row.lead_media_asset_id,
     createdAt: row.created_at,
     blocks,
     bylines: (row.article_byline ?? [])
@@ -927,7 +980,26 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
     .map((block) => block.mediaAssetId)
     .filter((assetId): assetId is number => assetId !== null);
 
+  // Rights and source for exactly these assets, from the admin-only tables (publishing is an
+  // admin action, so this read sees them). loadMediaAssets throws on a failed read rather than
+  // returning nothing, so an outage cannot look like "no rights recorded".
   const mediaAssets = await loadMediaAssets(locals, mediaAssetIds, 0);
+  const imageProvenance = new Map<number, ImageProvenance>(
+    mediaAssets.map((asset) => [
+      asset.id,
+      {
+        rights: asset.rights && {
+          license: asset.rights.license,
+          creditRequired: asset.rights.creditRequired,
+          expiresAt: asset.rights.expiresAt,
+        },
+        source: asset.source && {
+          sourceUrl: asset.source.sourceUrl,
+          licenseUrl: asset.source.licenseUrl,
+        },
+      },
+    ])
+  );
 
   const copy = await loadEntityCopy(
     locals.supabase,
@@ -952,6 +1024,6 @@ async function loadArticleForValidation(locals: App.Locals, id: number) {
         }
       : null,
     copy,
-    mediaAssets,
+    imageProvenance,
   };
 }

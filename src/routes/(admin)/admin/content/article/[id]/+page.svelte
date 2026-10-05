@@ -116,6 +116,23 @@
 
   const today = new Date().toISOString().slice(0, 10)
 
+  // The lead image is chosen from the body's images: those are the ones publish validation
+  // checks the rights of. Each asset once, in body order, even if two blocks reuse it.
+  const bodyImageAssets = $derived(
+    [
+      ...new Set(
+        article.blocks
+          .filter((block) => block.blockType === 'image' && block.mediaAssetId !== null)
+          .map((block) => block.mediaAssetId as number)
+      ),
+    ]
+      .map((assetId) => mediaAssetById.get(assetId))
+      .filter((asset) => asset !== undefined)
+  )
+
+  // A sentinel rather than '': an empty value reads as "nothing selected" to the Select.
+  const LEAD_IMAGE_AUTOMATIC = 'automatic'
+
   // Errors for the add-image forms appear beside them, not in the page banner. A failure leaves
   // the typed values and the chosen file in place, which a banner-and-reset would not.
   let uploadError = $state('')
@@ -466,6 +483,33 @@
           {/if}
         </div>
       </section>
+
+      <!-- ── Lead image ─────────────────────────────────────────────────── -->
+      {#if bodyImageAssets.length > 0}
+        <section class="admin-article__section" aria-label={t('content.admin.lead_image')}>
+          <h2 class="admin-article__section-title">{t('content.admin.lead_image')}</h2>
+
+          <form method="POST" action="?/lead_image" class="admin-article__form-stack" use:enhance>
+            <Field label={t('content.admin.lead_image')} id="lead-image" hint={t('content.admin.lead_image_hint')}>
+              <Select
+                name="lead_media_asset_id"
+                value={article.leadMediaAssetId === null || article.leadMediaAssetId === undefined
+                  ? LEAD_IMAGE_AUTOMATIC
+                  : String(article.leadMediaAssetId)}
+              >
+                <SelectItem value={LEAD_IMAGE_AUTOMATIC} label={t('content.admin.lead_image_automatic')} />
+                {#each bodyImageAssets as asset (asset.id)}
+                  <SelectItem value={String(asset.id)} label={assetLabel(asset)} />
+                {/each}
+              </Select>
+            </Field>
+
+            <div class="admin-article__actions">
+              <Button type="submit" size="sm">{dictionary.localText('action.save')}</Button>
+            </div>
+          </form>
+        </section>
+      {/if}
 
       <!-- ── Bylines ─────────────────────────────────────────────────────── -->
       <section class="admin-article__section" aria-label={t('content.admin.bylines')}>

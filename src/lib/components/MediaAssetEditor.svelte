@@ -154,7 +154,7 @@
           creditRequired: asset.rights?.creditRequired ?? false,
           sourceUrl: asset.source?.sourceUrl ?? '',
           licenseUrl: asset.source?.licenseUrl ?? '',
-          retrievedAt: asset.source?.retrievedAt.slice(0, 10) ?? '',
+          retrievedAt: asset.source?.retrievedAt?.slice(0, 10) ?? '',
           expiresAt: asset.rights?.expiresAt?.slice(0, 10) ?? '',
         }}
       />

@@ -10,6 +10,8 @@
   const scoped = $derived(createDictionary(data.copy))
   const t = (slug: string) => scoped.localText(slug, 'content')
 
+  const mediaAssets = $derived(new Map(data.mediaAssets.map((asset) => [asset.id, asset])))
+
   const name = $derived(scoped.localText('name', 'author_profile', data.author.id))
   const nameLocale = $derived(scoped.localeOf('name', 'author_profile', data.author.id))
   const bio = $derived(scoped.localText('bio', 'author_profile', data.author.id))
@@ -59,6 +61,9 @@
         {#each data.articles as article (article.id)}
           <ArticleCard
             {article}
+            {mediaAssets}
+            blocks={article.blocks}
+            storageBaseUrl={data.storageBaseUrl}
             status={article.status}
             sections={article.sections}
             topics={article.topics}

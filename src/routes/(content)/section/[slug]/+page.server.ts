@@ -1,5 +1,7 @@
 import { error } from '@sveltejs/kit';
+import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { loadEntityCopy, loadScopedCopy } from '$lib/server/scoped-copy';
+import { selectLeadMediaAssetId } from '@sveltebuilder/content/publishing';
 import type { ArticleRow, SectionPageView } from '@sveltebuilder/content/views';
 import type { PageServerLoad } from './$types';
 
@@ -7,6 +9,8 @@ import type { PageServerLoad } from './$types';
 // module's RLS policies. See supabase/supplemental/02-content-rls.sql.
 
 const PER_PAGE = 20;
+
+const STORAGE_BASE_URL = `${PUBLIC_SUPABASE_URL}/storage/v1/object/public`;
 
 const toOne = <T>(embed: T | T[] | null): T | null =>
   embed === null ? null : Array.isArray(embed) ? (embed[0] ?? null) : embed;
@@ -41,10 +45,13 @@ export const load: PageServerLoad = async ({ locals, params, url }): Promise<Sec
     locals.supabase
       .from('article_section')
       .select(
-        'article!inner(id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, created_at, article_status!inner(id, slug, ordinal), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at)))',
+        'article!inner(id, article_status_id, canonical_slug, published_at, updated_at, deleted_at, embargo_until, allow_comment, lead_media_asset_id, created_at, article_status!inner(id, slug, ordinal), article_block(id, article_id, block_type, position, content, media_asset_id, created_at), article_byline(position, author_profile(id, user_account_id, slug, active, created_at)), article_section(section(id, parent_section_id, slug, ordinal, active, created_at)), article_topic(topic(id, slug, active, created_at)), article_tag(tag(id, slug, active, created_at)))',
         { count: 'exact' }
       )
       .eq('section_id', section.id)
+      // Only image blocks come back for each article: a card needs the first picture, not the
+      // body. The filter narrows the embedded rows and leaves every article in the page.
+      .eq('article.article_block.block_type', 'image')
       .order('published_at', { ascending: false, referencedTable: 'article' })
       .range(from, from + PER_PAGE - 1),
     locals.supabase
@@ -77,7 +84,19 @@ export const load: PageServerLoad = async ({ locals, params, url }): Promise<Sec
       deletedAt: row.deleted_at,
       embargoUntil: row.embargo_until,
       allowComment: row.allow_comment,
+      leadMediaAssetId: row.lead_media_asset_id,
       createdAt: row.created_at,
+      blocks: (row.article_block ?? [])
+        .map((block) => ({
+          id: block.id,
+          articleId: block.article_id,
+          blockType: block.block_type,
+          position: block.position,
+          content: block.content,
+          mediaAssetId: block.media_asset_id,
+          createdAt: block.created_at,
+        }))
+        .sort((a, b) => a.position - b.position),
       status: { id: status.id, slug: status.slug, ordinal: status.ordinal },
       bylines: (row.article_byline ?? [])
         .map((byline) => ({ position: byline.position, author: toOne(byline.author_profile) }))
@@ -134,6 +153,25 @@ export const load: PageServerLoad = async ({ locals, params, url }): Promise<Sec
     createdAt: child.created_at,
   }));
 
+  // Each card's lead image, resolved by the same rule the article page uses (the editor's
+  // choice, else the first image block). Only those assets are fetched, not every block's.
+  const leadAssetIds = [
+    ...new Set(
+      articles
+        .map((article) => selectLeadMediaAssetId({ ...article, blocks: article.blocks ?? [] }))
+        .filter((lead): lead is NonNullable<typeof lead> => lead !== null)
+        .map((lead) => lead.mediaAssetId)
+    ),
+  ];
+  const mediaResult =
+    leadAssetIds.length > 0
+      ? await locals.supabase
+          .from('media_asset')
+          .select('id, media_type, storage_key, width, height, mime_type, uploaded_by, created_at')
+          .in('id', leadAssetIds)
+      : { data: [], error: null };
+  if (mediaResult.error) throw error(500, 'Failed to load media.');
+
   const [uiCopy, entityCopy] = await Promise.all([
     loadScopedCopy(locals.supabase, ['content'], locals.locale.code, locals.defaultLocale.code),
     // By id, not by scope: 'article' is unbounded, so a whole-scope load would ship every
@@ -169,6 +207,17 @@ export const load: PageServerLoad = async ({ locals, params, url }): Promise<Sec
     section,
     childSections,
     articles,
+    storageBaseUrl: STORAGE_BASE_URL,
+    mediaAssets: (mediaResult.data ?? []).map((asset) => ({
+      id: asset.id,
+      mediaType: asset.media_type,
+      storageKey: asset.storage_key,
+      width: asset.width,
+      height: asset.height,
+      mimeType: asset.mime_type,
+      uploadedBy: asset.uploaded_by,
+      createdAt: asset.created_at,
+    })),
     total: articlesResult.count ?? articles.length,
     page,
     perPage: PER_PAGE,
